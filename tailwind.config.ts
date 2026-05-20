@@ -11,6 +11,9 @@ const config: Config = {
       colors: {
         background: "var(--background)",
         foreground: "var(--foreground)",
+        'loak-blue': '#00A5CF',
+        'loak-blue-dark': '#0085A8',
+        'loak-light': '#F0F9FF',
       },
     },
   },
