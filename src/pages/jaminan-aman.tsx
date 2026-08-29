@@ -8,7 +8,11 @@ export default function JaminanAman() {
         <title>Jaminan Aman - LoakinAja</title>
       </Head>
       <div className="max-w-4xl mx-auto bg-white p-8 md:p-12 rounded-xl border border-gray-100 shadow-sm my-8">
-        <h1 className="text-3xl font-bold text-gray-900 mb-6">Jaminan Aman 100%</h1>
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+          <h1 className="text-3xl font-bold text-gray-900">Jaminan Aman 100%</h1>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/illustrations/secure-data.svg" alt="Ilustrasi data aman" className="h-28 w-auto" />
+        </div>
         <div className="space-y-4 text-gray-600 leading-relaxed">
           <p>Belanja barang bekas tanpa khawatir penipuan? Hanya di LoakinAja! Kami menerapkan sistem keamanan berlapis untuk melindungi penjual dan pembeli.</p>
           <div className="grid md:grid-cols-2 gap-6 mt-6">

@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
-import { Search, Heart, MessageSquare, User, Menu, X } from 'lucide-react';
+import { Search, Heart, MessageSquare, Menu, X, Coins, PlusCircle, LogOut } from 'lucide-react';
 import Illustration from './Illustration';
+import { useAuth } from '@/context/AuthContext';
 
 const Navbar = () => {
   const router = useRouter();
+  const { user, logout } = useAuth();
   const [menuOpen, setMenuOpen] = useState(false);
 
   useEffect(() => {
@@ -70,14 +72,44 @@ const Navbar = () => {
             <Link href="/favorites" className="text-gray-500 hover:text-loak-blue transition-colors" aria-label="Favorit">
               <Heart className="h-6 w-6" />
             </Link>
-            <div className="hidden sm:flex items-center space-x-2 ml-4 border-l pl-4">
-              <Link href="/login" className="text-sm font-medium text-loak-blue border border-loak-blue rounded-md px-4 py-2 hover:bg-loak-light transition-colors">
-                Masuk
-              </Link>
-              <Link href="/register" className="text-sm font-medium text-white bg-loak-blue rounded-md px-4 py-2 hover:bg-loak-blue-dark transition-colors">
-                Daftar
-              </Link>
-            </div>
+
+            {user ? (
+              <div className="hidden sm:flex items-center space-x-2 ml-4 border-l pl-4">
+                <Link
+                  href="/jual"
+                  className="inline-flex items-center gap-1.5 text-sm font-medium text-white bg-loak-blue rounded-md px-4 py-2 hover:bg-loak-blue-dark transition-colors"
+                >
+                  <PlusCircle className="h-4 w-4" /> Jual
+                </Link>
+                <Link
+                  href="/token"
+                  className="inline-flex items-center gap-1.5 text-sm font-medium text-loak-blue border border-loak-blue rounded-md px-3 py-2 hover:bg-loak-light transition-colors"
+                  title="Token tersedia"
+                >
+                  <Coins className="h-4 w-4" />
+                  <span className="font-bold">{user.tokens}</span>
+                </Link>
+                <div className="flex items-center gap-2 pl-1">
+                  <span className="text-sm text-gray-600 max-w-[120px] truncate">{user.name}</span>
+                  <button
+                    onClick={() => logout()}
+                    className="text-gray-400 hover:text-loak-blue transition-colors"
+                    aria-label="Keluar"
+                  >
+                    <LogOut className="h-5 w-5" />
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="hidden sm:flex items-center space-x-2 ml-4 border-l pl-4">
+                <Link href="/login" className="text-sm font-medium text-loak-blue border border-loak-blue rounded-md px-4 py-2 hover:bg-loak-light transition-colors">
+                  Masuk
+                </Link>
+                <Link href="/register" className="text-sm font-medium text-white bg-loak-blue rounded-md px-4 py-2 hover:bg-loak-blue-dark transition-colors">
+                  Daftar
+                </Link>
+              </div>
+            )}
 
             {/* Mobile Menu Toggle */}
             <div className="flex items-center sm:hidden ml-2">
@@ -138,14 +170,43 @@ const Navbar = () => {
           {/* Drawer content */}
           <div className="flex-1 overflow-y-auto px-4 py-5 space-y-6">
             {/* Auth */}
-            <div className="flex gap-3">
-              <Link href="/login" onClick={() => setMenuOpen(false)} className="flex-1 text-center text-sm font-medium text-loak-blue border border-loak-blue rounded-md px-4 py-2.5 hover:bg-loak-light transition-colors">
-                Masuk
-              </Link>
-              <Link href="/register" onClick={() => setMenuOpen(false)} className="flex-1 text-center text-sm font-medium text-white bg-loak-blue rounded-md px-4 py-2.5 hover:bg-loak-blue-dark transition-colors">
-                Daftar
-              </Link>
-            </div>
+            {user ? (
+              <div className="space-y-3">
+                <div className="flex items-center justify-between rounded-xl bg-loak-light px-4 py-3">
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold text-gray-800 truncate">{user.name}</p>
+                    <p className="text-xs text-gray-500 truncate">{user.email}</p>
+                  </div>
+                  <div className="inline-flex items-center gap-1.5 text-sm font-semibold text-loak-blue-dark">
+                    <Coins className="h-4 w-4" />
+                    {user.tokens}
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <Link href="/jual" onClick={() => setMenuOpen(false)} className="flex-1 text-center text-sm font-medium text-white bg-loak-blue rounded-md px-4 py-2.5 hover:bg-loak-blue-dark transition-colors">
+                    Jual Barang
+                  </Link>
+                  <Link href="/token" onClick={() => setMenuOpen(false)} className="flex-1 text-center text-sm font-medium text-loak-blue border border-loak-blue rounded-md px-4 py-2.5 hover:bg-loak-light transition-colors">
+                    Beli Token
+                  </Link>
+                </div>
+                <button
+                  onClick={() => { logout(); setMenuOpen(false); }}
+                  className="w-full text-center text-sm font-medium text-gray-600 border border-gray-200 rounded-md px-4 py-2.5 hover:bg-gray-50 transition-colors"
+                >
+                  Keluar
+                </button>
+              </div>
+            ) : (
+              <div className="flex gap-3">
+                <Link href="/login" onClick={() => setMenuOpen(false)} className="flex-1 text-center text-sm font-medium text-loak-blue border border-loak-blue rounded-md px-4 py-2.5 hover:bg-loak-light transition-colors">
+                  Masuk
+                </Link>
+                <Link href="/register" onClick={() => setMenuOpen(false)} className="flex-1 text-center text-sm font-medium text-white bg-loak-blue rounded-md px-4 py-2.5 hover:bg-loak-blue-dark transition-colors">
+                  Daftar
+                </Link>
+              </div>
+            )}
 
             {/* Categories */}
             <div>

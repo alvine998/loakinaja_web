@@ -209,11 +209,11 @@ export default function Home() {
           <div className="relative z-10 mx-auto max-w-2xl">
             <h2 className="text-2xl font-bold text-gray-800 md:text-3xl">Punya Barang Tak Terpakai?</h2>
             <p className="mt-3 text-gray-600">
-              Jual di LoakinAja dan dapatkan uang dengan cepat. Gratis posting, aman dengan Rekening Bersama.
+              Jual di LoakinAja dan dapatkan uang dengan cepat. Cukup pakai 1 token untuk 1 iklan, aman dengan Rekening Bersama.
             </p>
             <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
               <Link
-                href="/register"
+                href="/jual"
                 className="rounded-xl bg-loak-blue px-6 py-3 text-sm font-semibold text-white shadow-md transition-colors hover:bg-loak-blue-dark"
               >
                 Mulai Jualan

@@ -8,7 +8,11 @@ export default function Pembayaran() {
         <title>Pembayaran - LoakinAja</title>
       </Head>
       <div className="max-w-4xl mx-auto bg-white p-8 md:p-12 rounded-xl border border-gray-100 shadow-sm my-8">
-        <h1 className="text-3xl font-bold text-gray-900 mb-6">Metode Pembayaran</h1>
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+          <h1 className="text-3xl font-bold text-gray-900">Metode Pembayaran</h1>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/illustrations/mobile-payments.svg" alt="Ilustrasi pembayaran mobile" className="h-28 w-auto" />
+        </div>
         <div className="space-y-4 text-gray-600 leading-relaxed">
           <p>LoakinAja menyediakan berbagai metode pembayaran yang aman dan praktis untuk memudahkan transaksi Anda.</p>
           <ul className="list-disc pl-6 space-y-2">
