@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
-import { Search, Heart, MessageSquare, Menu, X, Coins, PlusCircle, LogOut, LayoutDashboard } from 'lucide-react';
+import { Search, Heart, MessageSquare, Menu, X, Coins, PlusCircle, LogOut, LayoutDashboard, Settings } from 'lucide-react';
 import Illustration from './Illustration';
 import { useAuth } from '@/context/AuthContext';
 
@@ -97,6 +97,14 @@ const Navbar = () => {
                   >
                     <LayoutDashboard className="h-4 w-4 shrink-0" />
                     <span className="max-w-[110px] truncate">{user.name}</span>
+                  </Link>
+                  <Link
+                    href="/profile"
+                    aria-label="Pengaturan Profil"
+                    title="Pengaturan Profil"
+                    className="text-gray-400 hover:text-loak-blue transition-colors"
+                  >
+                    <Settings className="h-5 w-5" />
                   </Link>
                   <button
                     onClick={() => logout()}
@@ -205,12 +213,21 @@ const Navbar = () => {
                     Beli Token
                   </Link>
                 </div>
-                <button
-                  onClick={() => { logout(); setMenuOpen(false); }}
-                  className="w-full text-center text-sm font-medium text-gray-600 border border-gray-200 rounded-md px-4 py-2.5 hover:bg-gray-50 transition-colors"
-                >
-                  Keluar
-                </button>
+                <div className="grid grid-cols-2 gap-3">
+                  <Link
+                    href="/profile"
+                    onClick={() => setMenuOpen(false)}
+                    className="flex-1 text-center text-sm font-medium text-gray-700 border border-gray-200 rounded-md px-4 py-2.5 hover:bg-gray-50 transition-colors"
+                  >
+                    Pengaturan Profil
+                  </Link>
+                  <button
+                    onClick={() => { logout(); setMenuOpen(false); }}
+                    className="flex-1 text-center text-sm font-medium text-gray-600 border border-gray-200 rounded-md px-4 py-2.5 hover:bg-gray-50 transition-colors"
+                  >
+                    Keluar
+                  </button>
+                </div>
               </div>
             ) : (
               <div className="flex gap-3">

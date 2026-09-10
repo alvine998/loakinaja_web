@@ -171,6 +171,66 @@ export async function getCurrentUser(): Promise<Omit<User, 'password'> | null> {
   return delay(user ? publicUser(user) : null);
 }
 
+export async function updateProfile(input: {
+  name: string;
+  email: string;
+  phone: string;
+}): Promise<Omit<User, 'password'>> {
+  const id = read<string | null>(KEY_SESSION, null);
+  if (!id) throw new Error('Anda harus masuk terlebih dahulu.');
+
+  const name = input.name.trim();
+  const email = input.email.trim().toLowerCase();
+  const phone = input.phone.trim();
+
+  if (!name) throw new Error('Nama tidak boleh kosong.');
+  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    throw new Error('Format email tidak valid.');
+  }
+  if (!phone) throw new Error('Nomor telepon tidak boleh kosong.');
+
+  const users = read<User[]>(KEY_USERS, []);
+  const idx = users.findIndex((u) => u.id === id);
+  if (idx === -1) throw new Error('Akun tidak ditemukan.');
+
+  if (users.some((u) => u.id !== id && u.email === email)) {
+    throw new Error('Email sudah digunakan akun lain.');
+  }
+  if (users.some((u) => u.id !== id && u.phone === phone)) {
+    throw new Error('Nomor telepon sudah digunakan akun lain.');
+  }
+
+  users[idx] = { ...users[idx], name, email, phone };
+  write(KEY_USERS, users);
+  return delay(publicUser(users[idx]));
+}
+
+export async function changePassword(
+  currentPassword: string,
+  newPassword: string
+): Promise<void> {
+  const id = read<string | null>(KEY_SESSION, null);
+  if (!id) throw new Error('Anda harus masuk terlebih dahulu.');
+
+  const users = read<User[]>(KEY_USERS, []);
+  const idx = users.findIndex((u) => u.id === id);
+  if (idx === -1) throw new Error('Akun tidak ditemukan.');
+
+  if (users[idx].password !== currentPassword) {
+    throw new Error('Password saat ini salah.');
+  }
+  if (newPassword.length < 8) {
+    throw new Error('Password baru minimal 8 karakter.');
+  }
+  if (newPassword === currentPassword) {
+    throw new Error('Password baru harus berbeda dari password saat ini.');
+  }
+
+  users[idx] = { ...users[idx], password: newPassword };
+  write(KEY_USERS, users);
+  return delay(undefined);
+}
+
 // ---------- OTP (mock) ----------
 
 interface ResetPending {
