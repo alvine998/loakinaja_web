@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
-import { Search, Heart, MessageSquare, Menu, X, Coins, PlusCircle, LogOut } from 'lucide-react';
+import { Search, Heart, MessageSquare, Menu, X, Coins, PlusCircle, LogOut, LayoutDashboard } from 'lucide-react';
 import Illustration from './Illustration';
 import { useAuth } from '@/context/AuthContext';
 
@@ -90,7 +90,14 @@ const Navbar = () => {
                   <span className="font-bold">{user.tokens}</span>
                 </Link>
                 <div className="flex items-center gap-2 pl-1">
-                  <span className="text-sm text-gray-600 max-w-[120px] truncate">{user.name}</span>
+                  <Link
+                    href="/dashboard"
+                    title="Dashboard Penjual"
+                    className="flex items-center gap-1.5 text-sm text-gray-600 transition-colors hover:text-loak-blue"
+                  >
+                    <LayoutDashboard className="h-4 w-4 shrink-0" />
+                    <span className="max-w-[110px] truncate">{user.name}</span>
+                  </Link>
                   <button
                     onClick={() => logout()}
                     className="text-gray-400 hover:text-loak-blue transition-colors"
@@ -182,6 +189,14 @@ const Navbar = () => {
                     {user.tokens}
                   </div>
                 </div>
+                <Link
+                  href="/dashboard"
+                  onClick={() => setMenuOpen(false)}
+                  className="flex w-full items-center justify-center gap-2 rounded-md border border-loak-blue px-4 py-2.5 text-sm font-semibold text-loak-blue transition-colors hover:bg-loak-light"
+                >
+                  <LayoutDashboard className="h-4 w-4" />
+                  Dashboard Penjual
+                </Link>
                 <div className="grid grid-cols-2 gap-3">
                   <Link href="/jual" onClick={() => setMenuOpen(false)} className="flex-1 text-center text-sm font-medium text-white bg-loak-blue rounded-md px-4 py-2.5 hover:bg-loak-blue-dark transition-colors">
                     Jual Barang

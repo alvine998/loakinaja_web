@@ -23,6 +23,8 @@ export interface OtpRecord {
   used: boolean;
 }
 
+export type ListingStatus = 'active' | 'sold';
+
 export interface Listing {
   id: string;
   userId: string;
@@ -34,7 +36,17 @@ export interface Listing {
   location: string;
   images: string[];
   createdAt: string;
-  status: 'active';
+  status: ListingStatus;
+}
+
+export interface ListingInput {
+  title: string;
+  category: string;
+  price: number;
+  condition: string;
+  description: string;
+  location: string;
+  images?: string[];
 }
 
 export interface TokenPackage {
@@ -331,15 +343,7 @@ export async function getMyListings(): Promise<Listing[]> {
   );
 }
 
-export async function createListing(input: {
-  title: string;
-  category: string;
-  price: number;
-  condition: string;
-  description: string;
-  location: string;
-  images: string[];
-}): Promise<Listing> {
+export async function createListing(input: ListingInput): Promise<Listing> {
   const id = read<string | null>(KEY_SESSION, null);
   if (!id) throw new Error('Anda harus masuk untuk memasang iklan.');
   const users = read<User[]>(KEY_USERS, []);
@@ -348,6 +352,10 @@ export async function createListing(input: {
   if (users[idx].tokens < 1) {
     throw new Error('Token tidak cukup. Beli token untuk memasang iklan.');
   }
+
+  const images = input.images?.length
+    ? input.images
+    : [placeholderImage(input.category)];
 
   const listing: Listing = {
     id: uid(),
@@ -358,13 +366,7 @@ export async function createListing(input: {
     condition: input.condition,
     description: input.description.trim(),
     location: input.location.trim(),
-    images: input.images.length
-      ? input.images
-      : [
-          `https://placehold.co/400x300/E2E8F0/1E293B?text=${encodeURIComponent(
-            input.category
-          )}`,
-        ],
+    images,
     createdAt: new Date().toISOString(),
     status: 'active',
   };
@@ -380,6 +382,56 @@ export async function createListing(input: {
   write(KEY_USERS, users);
 
   return delay(listing);
+}
+
+export async function updateListing(
+  listingId: string,
+  input: ListingInput
+): Promise<Listing> {
+  const listings = read<Listing[]>(KEY_LISTINGS, []);
+  const idx = listings.findIndex((l) => l.id === listingId);
+  if (idx === -1) throw new Error('Iklan tidak ditemukan.');
+
+  const images = input.images?.length ? input.images : listings[idx].images;
+
+  listings[idx] = {
+    ...listings[idx],
+    title: input.title.trim(),
+    category: input.category,
+    price: input.price,
+    condition: input.condition,
+    description: input.description.trim(),
+    location: input.location.trim(),
+    images: images.length ? images : [placeholderImage(input.category)],
+  };
+  write(KEY_LISTINGS, listings);
+  return delay(listings[idx]);
+}
+
+export async function setListingStatus(
+  listingId: string,
+  status: ListingStatus
+): Promise<Listing> {
+  const listings = read<Listing[]>(KEY_LISTINGS, []);
+  const idx = listings.findIndex((l) => l.id === listingId);
+  if (idx === -1) throw new Error('Iklan tidak ditemukan.');
+  listings[idx] = { ...listings[idx], status };
+  write(KEY_LISTINGS, listings);
+  return delay(listings[idx]);
+}
+
+export async function deleteListing(listingId: string): Promise<void> {
+  const listings = read<Listing[]>(KEY_LISTINGS, []);
+  const next = listings.filter((l) => l.id !== listingId);
+  if (next.length === listings.length) throw new Error('Iklan tidak ditemukan.');
+  write(KEY_LISTINGS, next);
+  return delay(undefined);
+}
+
+function placeholderImage(category: string): string {
+  return `https://placehold.co/400x300/E2E8F0/1E293B?text=${encodeURIComponent(
+    category
+  )}`;
 }
 
 export const CATEGORIES = [

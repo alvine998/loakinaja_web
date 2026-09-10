@@ -6,7 +6,11 @@
       "Shell(lsof:*)",
       "Shell(agent-browser:*)",
       "Shell(npx tsc --noEmit 2 >& 1)",
-      "Shell(node -e ' const fs = require(\"fs\"); const p = \"src/pages/jual.tsx\"; const lines = fs.readFileSync(p, \"utf8\").split(\"\\n\"); const start = 275, end = 427; // 1-indexed inclusive for (let i = start - 1; i <= end - 1; i++) { if (lines[i].trim() !== \"\") lines[i] = \" \" + lines[i]; } fs.writeFileSync(p, lines.join(\"\\n\")); console.log(\"reindented lines\", start, \"-\", end); ')"
+      "Shell(node -e ' const fs = require(\"fs\"); const p = \"src/pages/jual.tsx\"; const lines = fs.readFileSync(p, \"utf8\").split(\"\\n\"); const start = 275, end = 427; // 1-indexed inclusive for (let i = start - 1; i <= end - 1; i++) { if (lines[i].trim() !== \"\") lines[i] = \" \" + lines[i]; } fs.writeFileSync(p, lines.join(\"\\n\")); console.log(\"reindented lines\", start, \"-\", end); ')",
+      "Shell(node -e  const l = require(\"./node_modules/lucide-react/dist/cjs/lucide-react.js\"); const want = [\"Pencil\",\"Package\",\"PackageOpen\",\"Boxes\",\"Wallet\",\"Trash2\",\"PlusCircle\",\"Coins\",\"Eye\",\"Tag\",\"LayoutDashboard\",\"Store\",\"TrendingUp\",\"CheckCircle2\",\"AlertCircle\",\"ShoppingBag\",\"BadgeCheck\",\"X\",\"Save\",\"Loader2\",\"CircleDollarSign\"]; console.log(want.map(n => n + \": \" + (n in l)).join(\"\\n\"));  2 >& 1)",
+      "Shell(curl -s -o /tmp/dash.html -w HTTP %{http_code}\\n --max-time 60 http://localhost:3000/dashboard)",
+      "Shell(for p in /jual /token /register; do code=$(curl -s -o /tmp/p.html -w \"%{http_code}\" --max-time 60 \"http://localhost:3000$p\"); errs=$(grep -o \"Unhandled Runtime Error\\|Module not found\\|Failed to compile\\|SyntaxError\" /tmp/p.html | sort -u | tr '\\n' ' '); echo \"$p -> HTTP $code ${errs:-(clean)}\"; done)",
+      "Shell(node \"/private/tmp/commandcode-501/-Users-alvineyoga-Documents-new-non-jobs-loakinaja-web/1bc1454a-6ded-4472-a013-78b487f7c75a/scratchpad/db-check.js\")"
     ],
     "deny": [],
     "defaultMode": "default"
