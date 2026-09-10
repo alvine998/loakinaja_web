@@ -156,11 +156,11 @@ export default function Register() {
               <div className="ml-3 text-sm">
                 <label htmlFor="terms" className="font-medium text-gray-700">
                   Saya setuju dengan{' '}
-                  <Link href="#" className="text-loak-blue hover:underline">
+                  <Link href="/syarat-ketentuan" target="_blank" rel="noopener noreferrer" className="text-loak-blue hover:underline">
                     Syarat & Ketentuan
                   </Link>{' '}
                   serta{' '}
-                  <Link href="#" className="text-loak-blue hover:underline">
+                  <Link href="/kebijakan-privasi" target="_blank" rel="noopener noreferrer" className="text-loak-blue hover:underline">
                     Kebijakan Privasi
                   </Link>
                 </label>
