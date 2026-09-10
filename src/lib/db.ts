@@ -32,7 +32,7 @@ export interface Listing {
   condition: string;
   description: string;
   location: string;
-  image: string;
+  images: string[];
   createdAt: string;
   status: 'active';
 }
@@ -338,7 +338,7 @@ export async function createListing(input: {
   condition: string;
   description: string;
   location: string;
-  image?: string;
+  images: string[];
 }): Promise<Listing> {
   const id = read<string | null>(KEY_SESSION, null);
   if (!id) throw new Error('Anda harus masuk untuk memasang iklan.');
@@ -349,10 +349,6 @@ export async function createListing(input: {
     throw new Error('Token tidak cukup. Beli token untuk memasang iklan.');
   }
 
-  // Deduct 1 token for 1 ad.
-  users[idx].tokens -= 1;
-  write(KEY_USERS, users);
-
   const listing: Listing = {
     id: uid(),
     userId: id,
@@ -362,17 +358,27 @@ export async function createListing(input: {
     condition: input.condition,
     description: input.description.trim(),
     location: input.location.trim(),
-    image:
-      input.image ||
-      `https://placehold.co/400x300/E2E8F0/1E293B?text=${encodeURIComponent(
-        input.category
-      )}`,
+    images: input.images.length
+      ? input.images
+      : [
+          `https://placehold.co/400x300/E2E8F0/1E293B?text=${encodeURIComponent(
+            input.category
+          )}`,
+        ],
     createdAt: new Date().toISOString(),
     status: 'active',
   };
+
+  // Persist the (potentially large) listing first so a storage quota error
+  // cannot cost the user a token.
   const listings = read<Listing[]>(KEY_LISTINGS, []);
   listings.push(listing);
   write(KEY_LISTINGS, listings);
+
+  // Deduct 1 token for 1 ad.
+  users[idx].tokens -= 1;
+  write(KEY_USERS, users);
+
   return delay(listing);
 }
 

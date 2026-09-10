@@ -4,4 +4,4 @@
 - Prioritizes mobile responsiveness: explicitly asks for pages to be improved for mobile (mobile-first layouts, stacked headers, adequate touch targets) in the LoakinAja web app (Next.js + Tailwind). Confidence: 0.6
 
 ## Communication
-- Communicates with very short, terse, lowercase imperative instructions (e.g., "improve token page for mobile responsive", "continue") and provides minimal context beyond the IDE selection. Confidence: 0.5
+- Communicates with very short, terse, lowercase imperative instructions (e.g., "improve token page for mobile responsive", "upload image at /jual must max 10 images and total is 10 MB") and provides minimal context beyond the IDE selection (e.g., "beside form that will be preview of ads"). Confidence: 0.65
