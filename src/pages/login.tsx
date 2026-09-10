@@ -18,9 +18,11 @@ export default function Login() {
     setError('');
     setSubmitting(true);
     try {
-      await login(email, password);
+      const { identifier } = await login(email, password);
       const next = (router.query.next as string) || '/';
-      router.push(next);
+      router.push(
+        `/verify-otp?identifier=${encodeURIComponent(identifier)}&purpose=login&next=${encodeURIComponent(next)}`
+      );
     } catch (err) {
       setError((err as Error).message);
       setSubmitting(false);
@@ -75,7 +77,7 @@ export default function Login() {
                 <label htmlFor="password" className="block text-sm font-medium text-gray-700">
                   Password
                 </label>
-                <Link href="#" className="text-xs font-medium text-loak-blue hover:text-loak-blue-dark">
+                <Link href="/forgot-password" className="text-xs font-medium text-loak-blue hover:text-loak-blue-dark">
                   Lupa Password?
                 </Link>
               </div>

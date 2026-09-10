@@ -134,9 +134,11 @@ export default function CategoryPage() {
 
         {/* Main Content */}
         <main className="flex-grow">
-          <div className="flex justify-between items-center mb-4">
-            <h1 className="text-xl md:text-2xl font-bold text-gray-900">Menampilkan produk untuk "{categoryName}"</h1>
-            <div className="flex items-center gap-2">
+          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-4 gap-3">
+            <h1 className="text-lg sm:text-xl md:text-2xl font-bold text-gray-900">
+              Menampilkan produk untuk "{categoryName}"
+            </h1>
+            <div className="flex items-center gap-2 shrink-0">
               {/* Mobile filter toggle */}
               <button
                 type="button"

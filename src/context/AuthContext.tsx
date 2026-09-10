@@ -7,10 +7,11 @@ import React, {
 } from 'react';
 import {
   registerUser,
-  loginUser,
   logoutUser,
   getCurrentUser,
   buyTokens as dbBuyTokens,
+  verifyPasswordCredentials,
+  requestLoginOtp,
 } from '@/lib/db';
 
 type PublicUser = {
@@ -31,7 +32,7 @@ interface AuthContextValue {
     phone: string;
     password: string;
   }) => Promise<PublicUser>;
-  login: (email: string, password: string) => Promise<PublicUser>;
+  login: (email: string, password: string) => Promise<{ identifier: string }>;
   logout: () => Promise<void>;
   refresh: () => Promise<void>;
   addTokens: (packageId: string) => Promise<void>;
@@ -66,9 +67,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   }, []);
 
   const login = useCallback(async (email: string, password: string) => {
-    const u = await loginUser(email, password);
-    setUser(u);
-    return u;
+    const identifier = await verifyPasswordCredentials(email, password);
+    const res = await requestLoginOtp(identifier);
+    return { identifier: res.identifier };
   }, []);
 
   const logout = useCallback(async () => {
