@@ -52,16 +52,16 @@ export default function TokenPage() {
       </Head>
 
       <div className="max-w-4xl mx-auto">
-        <div className="mb-6 flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">Beli Token</h1>
+        <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="min-w-0">
+            <h1 className="text-2xl font-bold text-gray-900 sm:text-3xl">Beli Token</h1>
             <p className="text-sm text-gray-500 mt-1">
               Token digunakan untuk memasang iklan. <strong>1 token = 1 iklan</strong>.
             </p>
           </div>
-          <div className="inline-flex items-center gap-2 rounded-full bg-loak-light px-4 py-2 text-loak-blue-dark">
+          <div className="inline-flex items-center gap-2 self-start rounded-full bg-loak-light px-4 py-2 text-loak-blue-dark sm:self-auto">
             <Coins className="h-5 w-5" />
-            <span className="text-sm font-semibold">{user.tokens} token</span>
+            <span className="text-sm font-semibold whitespace-nowrap">{user.tokens} token</span>
           </div>
         </div>
 
@@ -76,35 +76,35 @@ export default function TokenPage() {
           </div>
         )}
 
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-5 sm:gap-4">
           {TOKEN_PACKAGES.map((pkg) => (
             <div
               key={pkg.id}
-              className={`relative flex flex-col rounded-2xl border bg-white p-6 shadow-sm transition-all ${
+              className={`relative flex flex-col rounded-2xl border bg-white p-5 sm:p-6 shadow-sm transition-all ${
                 pkg.popular
                   ? 'border-loak-blue ring-2 ring-loak-blue/30'
                   : 'border-gray-100'
               }`}
             >
               {pkg.popular && (
-                <span className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-loak-blue px-3 py-1 text-xs font-semibold text-white">
+                <span className="absolute -top-3 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full bg-loak-blue px-3 py-1 text-xs font-semibold text-white">
                   Paling Hemat
                 </span>
               )}
-              <div className="mb-4 flex items-center justify-center h-14 w-14 mx-auto rounded-full bg-loak-light">
-                <Coins className="h-7 w-7 text-loak-blue" />
+              <div className="mb-4 flex items-center justify-center h-12 w-12 sm:h-14 sm:w-14 mx-auto rounded-full bg-loak-light">
+                <Coins className="h-6 w-6 sm:h-7 sm:w-7 text-loak-blue" />
               </div>
-              <p className="text-center text-lg font-bold text-gray-900">
+              <p className="text-center text-lg sm:text-xl font-bold text-gray-900">
                 {pkg.tokens} Token
               </p>
-              <p className="text-center text-sm text-gray-500 mb-4">{pkg.label}</p>
-              <p className="text-center text-2xl font-extrabold text-loak-blue mb-5">
+              <p className="text-center text-sm text-gray-500 mb-3 sm:mb-4">{pkg.label}</p>
+              <p className="text-center text-xl sm:text-2xl font-extrabold text-loak-blue mb-4 sm:mb-5">
                 {fmt(pkg.price)}
               </p>
               <button
                 onClick={() => handleBuy(pkg.id)}
                 disabled={buying === pkg.id}
-                className="mt-auto w-full flex justify-center items-center gap-2 py-2.5 px-4 rounded-lg text-sm font-bold text-white bg-loak-blue hover:bg-loak-blue-dark transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="mt-auto w-full flex justify-center items-center gap-2 py-3 sm:py-2.5 px-4 rounded-lg text-sm font-bold text-white bg-loak-blue hover:bg-loak-blue-dark transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {buying === pkg.id ? (
                   'Memproses...'
@@ -118,14 +118,14 @@ export default function TokenPage() {
           ))}
         </div>
 
-        <div className="mt-8 rounded-2xl bg-loak-light px-6 py-6 text-center">
+        <div className="mt-8 rounded-2xl bg-loak-light px-4 py-5 sm:px-6 sm:py-6 text-center">
           <p className="text-sm text-gray-600">
             Baru daftar? Kamu sudah mendapatkan{' '}
             <strong>3 token gratis</strong> untuk mulai berjualan.
           </p>
           <Link
             href="/jual"
-            className="mt-3 inline-block rounded-xl bg-loak-blue px-6 py-3 text-sm font-semibold text-white shadow-md transition-colors hover:bg-loak-blue-dark"
+            className="mt-3 block w-full sm:w-auto rounded-xl bg-loak-blue px-6 py-3 text-sm font-semibold text-white shadow-md transition-colors hover:bg-loak-blue-dark"
           >
             Mulai Pasang Iklan
           </Link>
