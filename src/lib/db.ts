@@ -57,20 +57,112 @@ export interface TokenPackage {
   popular?: boolean;
 }
 
+export interface PaymentMethod {
+  id: string;
+  label: string;
+  group: string;
+  codeLabel: string;
+  instructions: string[];
+}
+
+export type OrderStatus = 'pending' | 'paid' | 'failed' | 'expired';
+
+export interface TokenOrder {
+  id: string;
+  userId: string;
+  packageId: string;
+  packageLabel: string;
+  tokens: number;
+  pricePerToken: number;
+  amount: number;
+  method: string;
+  paymentCode: string;
+  status: OrderStatus;
+  createdAt: string;
+  expiresAt: string;
+  paidAt?: string;
+}
+
 const KEY_USERS = 'loakinaja_users';
 const KEY_LISTINGS = 'loakinaja_listings';
 const KEY_SESSION = 'loakinaja_session';
 const KEY_OTPS = 'loakinaja_otps';
 const KEY_RESET_PENDING = 'loakinaja_reset_pending';
+const KEY_ORDERS = 'loakinaja_token_orders';
 
 const OTP_TTL_MS = 5 * 60 * 1000;
+const ORDER_TTL_MS = 15 * 60 * 1000;
 
 export const FREE_TOKENS_ON_REGISTER = 3;
 
+export const PRICE_PER_TOKEN = 1000;
+
 export const TOKEN_PACKAGES: TokenPackage[] = [
-  { id: 'starter', tokens: 5, price: 50000, label: 'Starter' },
-  { id: 'popular', tokens: 10, price: 90000, label: 'Populer', popular: true },
-  { id: 'pro', tokens: 20, price: 160000, label: 'Pro' },
+  { id: 'starter', tokens: 5, price: 5 * PRICE_PER_TOKEN, label: 'Starter' },
+  { id: 'popular', tokens: 10, price: 10 * PRICE_PER_TOKEN, label: 'Populer', popular: true },
+  { id: 'pro', tokens: 20, price: 20 * PRICE_PER_TOKEN, label: 'Pro' },
+];
+
+export const PAYMENT_METHODS: PaymentMethod[] = [
+  {
+    id: 'bca-va',
+    label: 'BCA Virtual Account',
+    group: 'Virtual Account',
+    codeLabel: 'Nomor Virtual Account',
+    instructions: [
+      'Buka aplikasi BCA mobile, myBCA, atau ATM BCA.',
+      'Pilih m-Transfer, lalu Transfer ke BCA Virtual Account.',
+      'Masukkan nomor Virtual Account di atas dan periksa nominalnya.',
+      'Selesaikan pembayaran sebelum waktu habis.',
+    ],
+  },
+  {
+    id: 'mandiri-va',
+    label: 'Mandiri Virtual Account',
+    group: 'Virtual Account',
+    codeLabel: 'Nomor Virtual Account',
+    instructions: [
+      "Buka aplikasi Livin' by Mandiri atau ATM Mandiri.",
+      'Pilih Bayar, lalu Multipayment.',
+      'Masukkan nomor Virtual Account di atas dan periksa nominalnya.',
+      'Selesaikan pembayaran sebelum waktu habis.',
+    ],
+  },
+  {
+    id: 'bni-va',
+    label: 'BNI Virtual Account',
+    group: 'Virtual Account',
+    codeLabel: 'Nomor Virtual Account',
+    instructions: [
+      'Buka aplikasi BNI Mobile Banking atau ATM BNI.',
+      'Pilih Transfer, lalu Virtual Account Billing.',
+      'Masukkan nomor Virtual Account di atas dan periksa nominalnya.',
+      'Selesaikan pembayaran sebelum waktu habis.',
+    ],
+  },
+  {
+    id: 'gopay',
+    label: 'GoPay',
+    group: 'E-Wallet',
+    codeLabel: 'Kode Pembayaran',
+    instructions: [
+      'Buka aplikasi Gojek, lalu pilih GoPay.',
+      'Pilih Bayar dan masukkan kode pembayaran di atas.',
+      'Periksa nominal, lalu konfirmasi pembayaran.',
+    ],
+  },
+  {
+    id: 'alfamart',
+    label: 'Alfamart',
+    group: 'Minimarket',
+    codeLabel: 'Kode Pembayaran',
+    instructions: [
+      'Datang ke gerai Alfamart terdekat.',
+      'Sebutkan pembayaran LoakinAja dan tunjukkan kode di atas.',
+      'Bayar sesuai nominal sebelum waktu habis.',
+      'Simpan struk sebagai bukti pembayaran.',
+    ],
+  },
 ];
 
 const delay = <T,>(value: T): Promise<T> =>
@@ -375,19 +467,135 @@ export async function verifyLoginOtp(
   return delay(publicUser(user));
 }
 
-// ---------- Tokens ----------
+// ---------- Token orders (mock payment) ----------
+// There is no payment gateway wired up: an order is created here, the waiting
+// page polls it, and payTokenOrder() stands in for the gateway callback that
+// would normally credit the tokens.
 
-export async function buyTokens(packageId: string): Promise<Omit<User, 'password'>> {
-  const pkg = TOKEN_PACKAGES.find((p) => p.id === packageId);
-  if (!pkg) throw new Error('Paket token tidak ditemukan.');
+function requireSession(): string {
   const id = read<string | null>(KEY_SESSION, null);
   if (!id) throw new Error('Anda harus masuk terlebih dahulu.');
+  return id;
+}
+
+function randomDigits(length: number): string {
+  let digits = '';
+  for (let i = 0; i < length; i += 1) {
+    digits += Math.floor(Math.random() * 10);
+  }
+  return digits;
+}
+
+function generatePaymentCode(method: PaymentMethod): string {
+  return method.group === 'Virtual Account'
+    ? `8808${randomDigits(8)}`
+    : randomDigits(10);
+}
+
+function expireIfNeeded(order: TokenOrder): TokenOrder {
+  if (order.status === 'pending' && Date.parse(order.expiresAt) <= Date.now()) {
+    return { ...order, status: 'expired' };
+  }
+  return order;
+}
+
+export function getPaymentMethod(methodId: string): PaymentMethod | null {
+  return PAYMENT_METHODS.find((m) => m.id === methodId) ?? null;
+}
+
+export async function createTokenOrder(
+  packageId: string,
+  methodId: string
+): Promise<TokenOrder> {
+  const userId = requireSession();
+  const pkg = TOKEN_PACKAGES.find((p) => p.id === packageId);
+  if (!pkg) throw new Error('Paket token tidak ditemukan.');
+  const method = getPaymentMethod(methodId);
+  if (!method) throw new Error('Metode pembayaran tidak valid.');
+
+  const now = Date.now();
+  const order: TokenOrder = {
+    id: uid(),
+    userId,
+    packageId: pkg.id,
+    packageLabel: pkg.label,
+    tokens: pkg.tokens,
+    pricePerToken: PRICE_PER_TOKEN,
+    amount: pkg.tokens * PRICE_PER_TOKEN,
+    method: method.id,
+    paymentCode: generatePaymentCode(method),
+    status: 'pending',
+    createdAt: new Date(now).toISOString(),
+    expiresAt: new Date(now + ORDER_TTL_MS).toISOString(),
+  };
+
+  const orders = read<TokenOrder[]>(KEY_ORDERS, []);
+  orders.push(order);
+  write(KEY_ORDERS, orders);
+  return delay(order);
+}
+
+export async function getTokenOrder(orderId: string): Promise<TokenOrder | null> {
+  const userId = read<string | null>(KEY_SESSION, null);
+  if (!userId) return delay(null);
+
+  const orders = read<TokenOrder[]>(KEY_ORDERS, []);
+  const idx = orders.findIndex((o) => o.id === orderId && o.userId === userId);
+  if (idx === -1) return delay(null);
+
+  const order = expireIfNeeded(orders[idx]);
+  if (order !== orders[idx]) {
+    orders[idx] = order;
+    write(KEY_ORDERS, orders);
+  }
+  return delay(order);
+}
+
+export async function payTokenOrder(orderId: string): Promise<TokenOrder> {
+  const userId = requireSession();
+  const orders = read<TokenOrder[]>(KEY_ORDERS, []);
+  const idx = orders.findIndex((o) => o.id === orderId && o.userId === userId);
+  if (idx === -1) throw new Error('Pesanan tidak ditemukan.');
+
+  const order = expireIfNeeded(orders[idx]);
+  // Already settled: return as-is so a repeated confirmation cannot double-credit.
+  if (order.status === 'paid') return delay(order);
+  if (order.status === 'expired') {
+    throw new Error('Waktu pembayaran sudah habis. Buat pesanan baru.');
+  }
+  if (order.status === 'failed') {
+    throw new Error('Pesanan sudah dibatalkan. Buat pesanan baru.');
+  }
+
   const users = read<User[]>(KEY_USERS, []);
-  const idx = users.findIndex((u) => u.id === id);
-  if (idx === -1) throw new Error('Akun tidak ditemukan.');
-  users[idx].tokens += pkg.tokens;
+  const userIdx = users.findIndex((u) => u.id === userId);
+  if (userIdx === -1) throw new Error('Akun tidak ditemukan.');
+  users[userIdx].tokens += order.tokens;
   write(KEY_USERS, users);
-  return delay(publicUser(users[idx]));
+
+  const paid: TokenOrder = {
+    ...order,
+    status: 'paid',
+    paidAt: new Date().toISOString(),
+  };
+  orders[idx] = paid;
+  write(KEY_ORDERS, orders);
+  return delay(paid);
+}
+
+export async function failTokenOrder(orderId: string): Promise<TokenOrder> {
+  const userId = requireSession();
+  const orders = read<TokenOrder[]>(KEY_ORDERS, []);
+  const idx = orders.findIndex((o) => o.id === orderId && o.userId === userId);
+  if (idx === -1) throw new Error('Pesanan tidak ditemukan.');
+
+  const order = expireIfNeeded(orders[idx]);
+  if (order.status !== 'pending') return delay(order);
+
+  const failed: TokenOrder = { ...order, status: 'failed' };
+  orders[idx] = failed;
+  write(KEY_ORDERS, orders);
+  return delay(failed);
 }
 
 // ---------- Listings ----------

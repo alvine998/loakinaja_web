@@ -1,17 +1,15 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
-import { Coins, Check, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { Coins, ShoppingCart } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
-import { TOKEN_PACKAGES } from '@/lib/db';
+import { PRICE_PER_TOKEN, TOKEN_PACKAGES } from '@/lib/db';
+import { formatRupiah } from '@/lib/format';
 
 export default function TokenPage() {
   const router = useRouter();
-  const { user, loading, addTokens, refresh } = useAuth();
-  const [buying, setBuying] = useState<string | null>(null);
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
+  const { user, loading } = useAuth();
 
   useEffect(() => {
     if (!loading && !user) {
@@ -27,23 +25,9 @@ export default function TokenPage() {
     return null;
   }
 
-  const handleBuy = async (packageId: string) => {
-    setError('');
-    setSuccess('');
-    setBuying(packageId);
-    try {
-      await addTokens(packageId);
-      await refresh();
-      const pkg = TOKEN_PACKAGES.find((p) => p.id === packageId);
-      setSuccess(`Berhasil! ${pkg?.tokens} token ditambahkan ke akun kamu.`);
-    } catch (err) {
-      setError((err as Error).message);
-    } finally {
-      setBuying(null);
-    }
+  const handleBuy = (packageId: string) => {
+    router.push(`/checkout?package=${encodeURIComponent(packageId)}`);
   };
-
-  const fmt = (n: number) => `Rp ${n.toLocaleString('id-ID')}`;
 
   return (
     <>
@@ -56,7 +40,8 @@ export default function TokenPage() {
           <div className="min-w-0">
             <h1 className="text-2xl font-bold text-gray-900 sm:text-3xl">Beli Token</h1>
             <p className="text-sm text-gray-500 mt-1">
-              Token digunakan untuk memasang iklan. <strong>1 token = 1 iklan</strong>.
+              Token digunakan untuk memasang iklan. <strong>1 token = 1 iklan</strong> dengan
+              harga <strong>{formatRupiah(PRICE_PER_TOKEN)}</strong> per token.
             </p>
           </div>
           <div className="inline-flex items-center gap-2 self-start rounded-full bg-loak-light px-4 py-2 text-loak-blue-dark sm:self-auto">
@@ -64,17 +49,6 @@ export default function TokenPage() {
             <span className="text-sm font-semibold whitespace-nowrap">{user.tokens} token</span>
           </div>
         </div>
-
-        {error && (
-          <div className="mb-4 flex items-center gap-2 rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">
-            <AlertCircle className="h-5 w-5 shrink-0" /> {error}
-          </div>
-        )}
-        {success && (
-          <div className="mb-4 flex items-center gap-2 rounded-lg bg-green-50 border border-green-200 px-4 py-3 text-sm text-green-700">
-            <CheckCircle2 className="h-5 w-5 shrink-0" /> {success}
-          </div>
-        )}
 
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-5 sm:gap-4">
           {TOKEN_PACKAGES.map((pkg) => (
@@ -88,7 +62,7 @@ export default function TokenPage() {
             >
               {pkg.popular && (
                 <span className="absolute -top-3 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full bg-loak-blue px-3 py-1 text-xs font-semibold text-white">
-                  Paling Hemat
+                  Paling Populer
                 </span>
               )}
               <div className="mb-4 flex items-center justify-center h-12 w-12 sm:h-14 sm:w-14 mx-auto rounded-full bg-loak-light">
@@ -98,21 +72,17 @@ export default function TokenPage() {
                 {pkg.tokens} Token
               </p>
               <p className="text-center text-sm text-gray-500 mb-3 sm:mb-4">{pkg.label}</p>
-              <p className="text-center text-xl sm:text-2xl font-extrabold text-loak-blue mb-4 sm:mb-5">
-                {fmt(pkg.price)}
+              <p className="text-center text-xl sm:text-2xl font-extrabold text-loak-blue mb-1">
+                {formatRupiah(pkg.price)}
+              </p>
+              <p className="text-center text-xs text-gray-400 mb-4 sm:mb-5">
+                {pkg.tokens} × {formatRupiah(PRICE_PER_TOKEN)} per token
               </p>
               <button
                 onClick={() => handleBuy(pkg.id)}
-                disabled={buying === pkg.id}
-                className="mt-auto w-full flex justify-center items-center gap-2 py-3 sm:py-2.5 px-4 rounded-lg text-sm font-bold text-white bg-loak-blue hover:bg-loak-blue-dark transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="mt-auto w-full flex justify-center items-center gap-2 py-3 sm:py-2.5 px-4 rounded-lg text-sm font-bold text-white bg-loak-blue hover:bg-loak-blue-dark transition-colors"
               >
-                {buying === pkg.id ? (
-                  'Memproses...'
-                ) : (
-                  <>
-                    <Check className="h-4 w-4" /> Beli
-                  </>
-                )}
+                <ShoppingCart className="h-4 w-4" /> Beli
               </button>
             </div>
           ))}

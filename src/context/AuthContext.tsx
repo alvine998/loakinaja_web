@@ -9,7 +9,6 @@ import {
   registerUser,
   logoutUser,
   getCurrentUser,
-  buyTokens as dbBuyTokens,
   verifyPasswordCredentials,
   requestLoginOtp,
 } from '@/lib/db';
@@ -35,7 +34,6 @@ interface AuthContextValue {
   login: (email: string, password: string) => Promise<{ identifier: string }>;
   logout: () => Promise<void>;
   refresh: () => Promise<void>;
-  addTokens: (packageId: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
@@ -77,14 +75,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     setUser(null);
   }, []);
 
-  const addTokens = useCallback(async (packageId: string) => {
-    const u = await dbBuyTokens(packageId);
-    setUser(u);
-  }, []);
-
   return (
     <AuthContext.Provider
-      value={{ user, loading, register, login, logout, refresh, addTokens }}
+      value={{ user, loading, register, login, logout, refresh }}
     >
       {children}
     </AuthContext.Provider>
