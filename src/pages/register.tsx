@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
@@ -13,6 +13,7 @@ export default function Register() {
     email: '',
     phone: '',
     password: '',
+    referralCode: '',
     terms: false,
   });
   const [error, setError] = useState('');
@@ -20,6 +21,11 @@ export default function Register() {
 
   const set = (key: keyof typeof form, value: string | boolean) =>
     setForm((f) => ({ ...f, [key]: value }));
+
+  useEffect(() => {
+    if (!router.isReady || typeof router.query.referral !== 'string') return;
+    set('referralCode', router.query.referral.toUpperCase());
+  }, [router.isReady, router.query.referral]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -35,6 +41,7 @@ export default function Register() {
         email: form.email,
         phone: form.phone,
         password: form.password,
+        referralCode: form.referralCode,
       });
       const next = (router.query.next as string) || '/token';
       router.push(next);
@@ -139,6 +146,25 @@ export default function Register() {
                   placeholder="Minimal 8 karakter"
                 />
               </div>
+            </div>
+
+            <div>
+              <label htmlFor="referralCode" className="block text-sm font-medium text-gray-700">
+                Kode Referral <span className="font-normal text-gray-400">(opsional)</span>
+              </label>
+              <div className="mt-1">
+                <input
+                  id="referralCode"
+                  name="referralCode"
+                  type="text"
+                  autoComplete="off"
+                  value={form.referralCode}
+                  onChange={(e) => set('referralCode', e.target.value.toUpperCase())}
+                  className="appearance-none block w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm placeholder-gray-400 focus:outline-none focus:ring-loak-blue focus:border-loak-blue sm:text-sm"
+                  placeholder="Contoh: LOAKABC123"
+                />
+              </div>
+              <p className="mt-1 text-xs text-gray-400">Masukkan kode teman yang mengajakmu bergabung.</p>
             </div>
 
             <div className="flex items-start mt-4">

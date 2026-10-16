@@ -11,6 +11,8 @@ export interface User {
   password: string;
   tokens: number;
   createdAt: string;
+  referralCode?: string;
+  referredBy?: string;
 }
 
 export type OtpPurpose = 'reset' | 'login';
@@ -193,6 +195,26 @@ function publicUser(user: User): Omit<User, 'password'> {
   return rest;
 }
 
+function createReferralCode(users: User[]) {
+  let code = '';
+  do {
+    code = `LOAK${Math.random().toString(36).slice(2, 8).toUpperCase()}`;
+  } while (users.some((user) => user.referralCode === code));
+  return code;
+}
+
+function ensureReferralCodes(users: User[]) {
+  let changed = false;
+  users.forEach((user) => {
+    if (!user.referralCode) {
+      user.referralCode = createReferralCode(users);
+      changed = true;
+    }
+  });
+  if (changed) write(KEY_USERS, users);
+  return changed;
+}
+
 // ---------- Auth ----------
 
 export async function registerUser(input: {
@@ -200,11 +222,22 @@ export async function registerUser(input: {
   email: string;
   phone: string;
   password: string;
+  referralCode?: string;
 }): Promise<Omit<User, 'password'>> {
   const users = read<User[]>(KEY_USERS, []);
+  ensureReferralCodes(users);
   const email = input.email.trim().toLowerCase();
   if (users.some((u) => u.email === email)) {
     throw new Error('Email sudah terdaftar.');
+  }
+  const referrer = input.referralCode?.trim()
+    ? users.find(
+        (candidate) =>
+          candidate.referralCode?.toLowerCase() === input.referralCode?.trim().toLowerCase()
+      )
+    : undefined;
+  if (input.referralCode?.trim() && !referrer) {
+    throw new Error('Kode referral tidak ditemukan. Periksa kembali kode yang dimasukkan.');
   }
   const user: User = {
     id: uid(),
@@ -214,6 +247,8 @@ export async function registerUser(input: {
     password: input.password,
     tokens: FREE_TOKENS_ON_REGISTER,
     createdAt: new Date().toISOString(),
+    referralCode: createReferralCode(users),
+    ...(referrer ? { referredBy: referrer.id } : {}),
   };
   users.push(user);
   write(KEY_USERS, users);
@@ -259,8 +294,17 @@ export async function getCurrentUser(): Promise<Omit<User, 'password'> | null> {
   const id = read<string | null>(KEY_SESSION, null);
   if (!id) return delay(null);
   const users = read<User[]>(KEY_USERS, []);
+  ensureReferralCodes(users);
   const user = users.find((u) => u.id === id);
   return delay(user ? publicUser(user) : null);
+}
+
+export async function getMyReferralCount(): Promise<number> {
+  const id = read<string | null>(KEY_SESSION, null);
+  if (!id) return delay(0);
+  const users = read<User[]>(KEY_USERS, []);
+  ensureReferralCodes(users);
+  return delay(users.filter((user) => user.referredBy === id).length);
 }
 
 export async function updateProfile(input: {

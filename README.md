@@ -16,6 +16,26 @@ bun dev
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
+## Admin dashboard
+
+The admin area is available at `/admin/login`. Configure these server-side
+environment variables before signing in:
+
+```env
+ADMIN_EMAIL=admin@example.com
+ADMIN_PASSWORD=use-a-strong-unique-password
+ADMIN_SESSION_SECRET=use-a-long-random-secret
+```
+
+Generate a session secret with `openssl rand -base64 32`. Admin sessions are
+stored in an HTTP-only cookie and expire after eight hours. The dashboard reads
+marketplace records from the browser's local storage, matching this demo app's
+local-storage data model.
+
+The admin API requires a running Next.js server (`npm run dev` or `npm run
+build && npm start`). Static export is disabled because API routes and
+server-validated admin sessions cannot run from a static site host.
+
 You can start editing the page by modifying `pages/index.tsx`. The page auto-updates as you edit the file.
 
 [API routes](https://nextjs.org/docs/api-routes/introduction) can be accessed on [http://localhost:3000/api/hello](http://localhost:3000/api/hello). This endpoint can be edited in `pages/api/hello.ts`.

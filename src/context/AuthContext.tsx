@@ -20,6 +20,8 @@ type PublicUser = {
   phone: string;
   tokens: number;
   createdAt: string;
+  referralCode?: string;
+  referredBy?: string;
 };
 
 interface AuthContextValue {
@@ -30,6 +32,7 @@ interface AuthContextValue {
     email: string;
     phone: string;
     password: string;
+    referralCode?: string;
   }) => Promise<PublicUser>;
   login: (email: string, password: string) => Promise<{ identifier: string }>;
   logout: () => Promise<void>;
@@ -58,6 +61,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     email: string;
     phone: string;
     password: string;
+    referralCode?: string;
   }) => {
     const u = await registerUser(input);
     setUser(u);
