@@ -35,7 +35,9 @@ type Filter = 'all' | ListingStatus;
 
 const FILTERS: { id: Filter; label: string }[] = [
   { id: 'all', label: 'Semua' },
+  { id: 'pending', label: 'Menunggu review' },
   { id: 'active', label: 'Aktif' },
+  { id: 'rejected', label: 'Ditolak' },
   { id: 'sold', label: 'Terjual' },
 ];
 
@@ -132,7 +134,7 @@ export default function DashboardPenjual() {
     return {
       total: listings.length,
       active: active.length,
-      sold: listings.length - active.length,
+      sold: listings.filter((l) => l.status === 'sold').length,
       value: active.reduce((sum, l) => sum + l.price, 0),
     };
   }, [listings]);
@@ -144,7 +146,7 @@ export default function DashboardPenjual() {
   );
 
   const countFor = (id: Filter) =>
-    id === 'all' ? stats.total : id === 'active' ? stats.active : stats.sold;
+    id === 'all' ? stats.total : id === 'active' ? stats.active : listings.filter((listing) => listing.status === id).length;
 
   const openEdit = (listing: Listing) => {
     setError('');
@@ -392,14 +394,12 @@ export default function DashboardPenjual() {
                           <h3 className="line-clamp-2 text-sm font-medium text-gray-800">
                             {listing.title}
                           </h3>
-                          <span
+                           <span
                             className={`shrink-0 rounded-full px-3 py-1 text-xs font-semibold ${
-                              listing.status === 'active'
-                                ? 'bg-green-100 text-green-700'
-                                : 'bg-gray-100 text-gray-600'
+                              listing.status === 'active' ? 'bg-green-100 text-green-700' : listing.status === 'pending' ? 'bg-amber-100 text-amber-700' : listing.status === 'rejected' ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-600'
                             }`}
                           >
-                            {listing.status === 'active' ? 'Aktif' : 'Terjual'}
+                            {listing.status === 'active' ? 'Aktif' : listing.status === 'pending' ? 'Menunggu verifikasi' : listing.status === 'rejected' ? 'Ditolak' : 'Terjual'}
                           </span>
                         </div>
                         <p className="mt-1 text-xs text-gray-500">
@@ -412,6 +412,12 @@ export default function DashboardPenjual() {
                           Dipasang {formatDate(listing.createdAt)}
                           {listing.images?.length > 1 && ` · ${listing.images.length} foto`}
                         </p>
+                        {listing.status === 'rejected' && listing.reviewReason && (
+                          <p className="mt-1 text-xs text-red-600">Alasan penolakan: {listing.reviewReason}</p>
+                        )}
+                        {listing.status === 'pending' && (
+                          <p className="mt-1 text-xs text-amber-700">Iklan akan tayang setelah diverifikasi admin.</p>
+                        )}
                       </div>
                     </div>
 
@@ -424,7 +430,7 @@ export default function DashboardPenjual() {
                       >
                         <Pencil className="h-3.5 w-3.5" /> Edit
                       </button>
-                      <button
+                      {listing.status !== 'pending' && listing.status !== 'rejected' && <button
                         type="button"
                         onClick={() => handleToggleStatus(listing)}
                         disabled={isBusy}
@@ -439,7 +445,7 @@ export default function DashboardPenjual() {
                             <PackageOpen className="h-3.5 w-3.5" /> Aktifkan Kembali
                           </>
                         )}
-                      </button>
+                      </button>}
                       <button
                         type="button"
                         onClick={() => handleDelete(listing)}

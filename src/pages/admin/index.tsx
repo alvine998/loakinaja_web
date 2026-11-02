@@ -287,6 +287,11 @@ export default function AdminDashboard() {
     await router.replace('/admin/login');
   };
 
+  const reloadDashboardData = async () => {
+    const response = await adminRequest<{ data: AdminData }>('/admin/dashboard');
+    setData(response.data);
+  };
+
   const handleReviewListing = async (listing: AdminListing, decision: 'approve' | 'reject') => {
     setError('');
     setNotice('');

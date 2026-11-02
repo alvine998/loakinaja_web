@@ -24,7 +24,7 @@ export interface OtpRecord {
   used: boolean;
 }
 
-export type ListingStatus = 'active' | 'sold';
+export type ListingStatus = 'pending' | 'active' | 'rejected' | 'sold';
 
 export interface Listing {
   id: string;
@@ -38,6 +38,7 @@ export interface Listing {
   images: string[];
   createdAt: string;
   status: ListingStatus;
+  reviewReason?: string | null;
   seller?: { id: string; name: string; createdAt: string };
 }
 

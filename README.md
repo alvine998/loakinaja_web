@@ -9,11 +9,9 @@ to `.env.local` and set `NEXT_PUBLIC_API_URL` (default:
 `http://localhost:4000/api`). Start MySQL and the backend first, then run the
 frontend with `npm run dev`. Account and listing data are served by the API;
 payment orders and OTP password recovery are not enabled until their backend
-endpoints are available. The old local `.env` is only for the Next.js admin
-demo routes; do not use its placeholder admin credentials for deployment.
-Admin sign-in and listing review use the Express API; set `ADMIN_EMAIL` and
-`ADMIN_PASSWORD` in the backend environment. New listings remain pending until
-approved in `/admin`.
+endpoints are available. Admin sign-in and listing review use the Express API;
+set `ADMIN_EMAIL` and `ADMIN_PASSWORD` in the backend environment. New listings
+remain pending until approved in `/admin`.
 
 First, run the development server:
 
@@ -28,26 +26,6 @@ bun dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
-
-## Admin dashboard
-
-The admin area is available at `/admin/login`. Configure these server-side
-environment variables before signing in:
-
-```env
-ADMIN_EMAIL=admin@example.com
-ADMIN_PASSWORD=use-a-strong-unique-password
-ADMIN_SESSION_SECRET=use-a-long-random-secret
-```
-
-Generate a session secret with `openssl rand -base64 32`. Admin sessions are
-stored in an HTTP-only cookie and expire after eight hours. The dashboard reads
-marketplace records from the browser's local storage, matching this demo app's
-local-storage data model.
-
-The admin API requires a running Next.js server (`npm run dev` or `npm run
-build && npm start`). Static export is disabled because API routes and
-server-validated admin sessions cannot run from a static site host.
 
 You can start editing the page by modifying `pages/index.tsx`. The page auto-updates as you edit the file.
 
