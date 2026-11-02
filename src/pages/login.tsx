@@ -18,11 +18,9 @@ export default function Login() {
     setError('');
     setSubmitting(true);
     try {
-      const { identifier } = await login(email, password);
+      await login(email, password);
       const next = (router.query.next as string) || '/';
-      router.push(
-        `/verify-otp?identifier=${encodeURIComponent(identifier)}&purpose=login&next=${encodeURIComponent(next)}`
-      );
+      router.push(next);
     } catch (err) {
       setError((err as Error).message);
       setSubmitting(false);
@@ -61,8 +59,8 @@ export default function Login() {
                 <input
                   id="email"
                   name="email"
-                  type="email"
-                  autoComplete="email"
+                  type="text"
+                  autoComplete="username"
                   required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}

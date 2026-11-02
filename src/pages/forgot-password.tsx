@@ -1,31 +1,9 @@
-import React, { useState } from 'react';
+import React from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
-import { useRouter } from 'next/router';
-import { AlertCircle, MailSearch } from 'lucide-react';
-import { requestPasswordReset } from '@/lib/db';
+import { MailSearch } from 'lucide-react';
 
 export default function ForgotPassword() {
-  const router = useRouter();
-  const [identifier, setIdentifier] = useState('');
-  const [error, setError] = useState('');
-  const [submitting, setSubmitting] = useState(false);
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError('');
-    setSubmitting(true);
-    try {
-      const res = await requestPasswordReset(identifier);
-      router.push(
-        `/verify-otp?identifier=${encodeURIComponent(res.identifier)}&purpose=reset`
-      );
-    } catch (err) {
-      setError((err as Error).message);
-      setSubmitting(false);
-    }
-  };
-
   return (
     <>
       <Head>
@@ -41,18 +19,12 @@ export default function ForgotPassword() {
               Lupa Password
             </h2>
             <p className="text-sm text-gray-500 mt-2">
-              Masukkan Email / Nomor Telepon akun Anda. Kami akan mengirimkan
-              kode OTP untuk verifikasi.
+              Reset password melalui OTP belum tersedia. Hubungi dukungan LoakinAja
+              untuk bantuan mengatur ulang password.
             </p>
           </div>
 
-          {error && (
-            <div className="mb-4 flex items-center gap-2 rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">
-              <AlertCircle className="h-5 w-5 shrink-0" /> {error}
-            </div>
-          )}
-
-          <form className="space-y-6" onSubmit={handleSubmit}>
+          <div className="space-y-6">
             <div>
               <label htmlFor="identifier" className="block text-sm font-medium text-gray-700">
                 Email / Nomor Telepon
@@ -63,25 +35,23 @@ export default function ForgotPassword() {
                   name="identifier"
                   type="text"
                   autoComplete="email"
-                  required
-                  value={identifier}
-                  onChange={(e) => setIdentifier(e.target.value)}
+                  disabled
                   className="appearance-none block w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm placeholder-gray-400 focus:outline-none focus:ring-loak-blue focus:border-loak-blue sm:text-sm"
-                  placeholder="Contoh: email@loakinaja.com"
+                  placeholder="Reset OTP belum tersedia"
                 />
               </div>
             </div>
 
             <div>
               <button
-                type="submit"
-                disabled={submitting}
-                className="w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-bold text-white bg-loak-blue hover:bg-loak-blue-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-loak-blue transition-colors disabled:opacity-50"
-              >
-                {submitting ? 'Mengirim...' : 'Kirim Kode OTP'}
+                  type="button"
+                  disabled
+                  className="w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-bold text-white bg-gray-400 cursor-not-allowed"
+                >
+                  Fitur Belum Tersedia
               </button>
             </div>
-          </form>
+          </div>
 
           <p className="text-sm text-gray-500 mt-6 text-center">
             Ingat password Anda?{' '}

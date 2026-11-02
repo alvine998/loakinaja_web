@@ -4,11 +4,7 @@ import Link from 'next/link';
 import { Heart, Trash2 } from 'lucide-react';
 
 export default function Favorites() {
-  // Dummy data for favorites
-  const favoriteProducts = [
-    { id: 1, title: 'iPhone 13 Pro Max 256GB - Mulus Like New', price: 'Rp 14.500.000', location: 'Jakarta Selatan', image: 'https://placehold.co/400x300/E2E8F0/1E293B?text=iPhone' },
-    { id: 3, title: 'Kamera Mirrorless Sony A6400', price: 'Rp 10.000.000', location: 'Surabaya', image: 'https://placehold.co/400x300/E2E8F0/1E293B?text=Kamera' },
-  ];
+  const favoriteProducts: { id: string; title: string; image: string; price: string; location: string }[] = [];
 
   return (
     <>

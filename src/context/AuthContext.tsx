@@ -7,10 +7,9 @@ import React, {
 } from 'react';
 import {
   registerUser,
+  loginUser,
   logoutUser,
   getCurrentUser,
-  verifyPasswordCredentials,
-  requestLoginOtp,
 } from '@/lib/db';
 
 type PublicUser = {
@@ -34,7 +33,7 @@ interface AuthContextValue {
     password: string;
     referralCode?: string;
   }) => Promise<PublicUser>;
-  login: (email: string, password: string) => Promise<{ identifier: string }>;
+  login: (email: string, password: string) => Promise<PublicUser>;
   logout: () => Promise<void>;
   refresh: () => Promise<void>;
 }
@@ -69,9 +68,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   }, []);
 
   const login = useCallback(async (email: string, password: string) => {
-    const identifier = await verifyPasswordCredentials(email, password);
-    const res = await requestLoginOtp(identifier);
-    return { identifier: res.identifier };
+    const nextUser = await loginUser(email, password);
+    setUser(nextUser);
+    return nextUser;
   }, []);
 
   const logout = useCallback(async () => {

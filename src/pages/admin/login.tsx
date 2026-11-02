@@ -3,6 +3,7 @@ import Head from 'next/head';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { AlertCircle, ArrowLeft, LockKeyhole, ShieldCheck } from 'lucide-react';
+import { adminLogin } from '@/lib/adminApi';
 
 export default function AdminLogin() {
   const router = useRouter();
@@ -16,18 +17,7 @@ export default function AdminLogin() {
     setError('');
     setSubmitting(true);
     try {
-      const response = await fetch('/api/admin/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }),
-      });
-      if (!(response.headers.get('content-type') || '').includes('application/json')) {
-        throw new Error(
-          'Admin API tidak tersedia. Jalankan aplikasi dengan server Next.js (npm run dev/start); static export tidak mendukung admin login.'
-        );
-      }
-      const result = await response.json();
-      if (!response.ok) throw new Error(result.error || 'Gagal masuk.');
+      await adminLogin(email, password);
       await router.replace('/admin');
     } catch (err) {
       setError((err as Error).message);

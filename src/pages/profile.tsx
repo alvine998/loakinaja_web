@@ -385,13 +385,7 @@ export default function PengaturanProfil() {
               </form>
 
               <p className="mt-4 text-xs text-gray-400">
-                Lupa password saat ini?{' '}
-                <Link
-                  href="/forgot-password"
-                  className="font-medium text-loak-blue hover:underline"
-                >
-                  Reset lewat OTP
-                </Link>
+                Reset password melalui OTP belum tersedia.
               </p>
             </section>
           </div>

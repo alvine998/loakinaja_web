@@ -20,13 +20,14 @@ import {
   Listing,
 } from '@/lib/db';
 
-const MAX_IMAGES = 10;
-const MAX_TOTAL_BYTES = 10 * 1024 * 1024;
+const MAX_IMAGES = 5;
+const MAX_TOTAL_BYTES = 25 * 1024 * 1024;
 
 type UploadImage = {
   id: string;
   dataUrl: string;
   size: number;
+  file: File;
 };
 
 const formatBytes = (bytes: number) =>
@@ -34,8 +35,6 @@ const formatBytes = (bytes: number) =>
     ? `${(bytes / (1024 * 1024)).toFixed(1)} MB`
     : `${Math.max(1, Math.round(bytes / 1024))} KB`;
 
-// Photos are downscaled before being stored because the mock backend keeps
-// everything in localStorage, where raw camera files would blow the quota.
 async function readImage(file: File): Promise<UploadImage> {
   const dataUrl = await new Promise<string>((resolve, reject) => {
     const reader = new FileReader();
@@ -59,17 +58,30 @@ async function readImage(file: File): Promise<UploadImage> {
   const ctx = canvas.getContext('2d');
 
   let compressed = dataUrl;
+  let uploadFile = file;
   if (ctx) {
     ctx.fillStyle = '#ffffff';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
     ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
-    compressed = canvas.toDataURL('image/jpeg', 0.65);
+    compressed = canvas.toDataURL('image/jpeg', 0.78);
+    const blob = await new Promise<Blob | null>((resolve) =>
+      canvas.toBlob(resolve, 'image/jpeg', 0.78)
+    );
+    if (blob) {
+      uploadFile = new File([blob], `${file.name.replace(/\.[^.]+$/, '')}.jpg`, {
+        type: 'image/jpeg',
+      });
+    }
+  }
+  if (uploadFile.size > 5 * 1024 * 1024) {
+    throw new Error(`${file.name} terlalu besar setelah dikompres (maksimal 5 MB per gambar).`);
   }
 
   return {
     id: `${file.name}-${file.lastModified}-${Math.random().toString(36).slice(2, 7)}`,
     dataUrl: compressed,
-    size: file.size,
+    size: uploadFile.size,
+    file: uploadFile,
   };
 }
 
@@ -184,7 +196,7 @@ export default function Jual() {
         condition: form.condition,
         description: form.description,
         location: form.location,
-        images: images.map((img) => img.dataUrl),
+        imageFiles: images.map((img) => img.file),
       });
       await refresh();
       setListings(await getMyListings());

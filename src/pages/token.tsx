@@ -25,10 +25,6 @@ export default function TokenPage() {
     return null;
   }
 
-  const handleBuy = (packageId: string) => {
-    router.push(`/checkout?package=${encodeURIComponent(packageId)}`);
-  };
-
   return (
     <>
       <Head>
@@ -79,10 +75,11 @@ export default function TokenPage() {
                 {pkg.tokens} × {formatRupiah(PRICE_PER_TOKEN)} per token
               </p>
               <button
-                onClick={() => handleBuy(pkg.id)}
-                className="mt-auto w-full flex justify-center items-center gap-2 py-3 sm:py-2.5 px-4 rounded-lg text-sm font-bold text-white bg-loak-blue hover:bg-loak-blue-dark transition-colors"
+                disabled
+                title="Pembelian token belum tersedia di backend"
+                className="mt-auto w-full flex justify-center items-center gap-2 py-3 sm:py-2.5 px-4 rounded-lg text-sm font-bold text-white bg-gray-400 cursor-not-allowed"
               >
-                <ShoppingCart className="h-4 w-4" /> Beli
+                <ShoppingCart className="h-4 w-4" /> Segera Hadir
               </button>
             </div>
           ))}

@@ -1,17 +1,28 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
 import Link from 'next/link';
 import { MessageSquare, ShieldCheck, MapPin, Share2, Heart } from 'lucide-react';
+import { getListing, Listing } from '@/lib/db';
 
 export default function ProductPage() {
   const router = useRouter();
   const { id } = router.query;
+  const [product, setProduct] = useState<Listing | null>(null);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    if (typeof id !== 'string') return;
+    getListing(id).then(setProduct).catch((reason: Error) => setError(reason.message));
+  }, [id]);
+
+  const title = product?.title || 'Memuat produk...';
+  const images = product?.images?.length ? product.images : ['https://placehold.co/800x800/E2E8F0/1E293B?text=LoakinAja'];
 
   return (
     <>
       <Head>
-        <title>iPhone 13 Pro Max - LoakinAja</title>
+        <title>{product?.title || 'Produk'} - LoakinAja</title>
       </Head>
 
       <div className="text-sm text-gray-500 mb-6 flex items-center">
@@ -19,7 +30,7 @@ export default function ProductPage() {
         <span className="mx-2">{'>'}</span>
         <Link href="/category/handphone" className="hover:text-loak-blue">Handphone</Link>
         <span className="mx-2">{'>'}</span>
-        <span className="text-gray-900 font-medium truncate">iPhone 13 Pro Max 256GB - Mulus Like New</span>
+        <span className="text-gray-900 font-medium truncate">{title}</span>
       </div>
 
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
@@ -28,13 +39,13 @@ export default function ProductPage() {
           <div className="w-full lg:w-1/3 flex-shrink-0">
             <div className="bg-gray-100 rounded-xl overflow-hidden aspect-square mb-4">
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src="https://placehold.co/800x800/E2E8F0/1E293B?text=iPhone+13+Pro" alt="Product" className="w-full h-full object-cover" />
+              <img src={images[0]} alt={title} className="w-full h-full object-cover" />
             </div>
             <div className="flex gap-2">
-              {[1, 2, 3].map((img) => (
+              {images.map((img, index) => (
                 <div key={img} className="w-20 h-20 bg-gray-100 rounded-lg cursor-pointer border-2 border-transparent hover:border-loak-blue overflow-hidden">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={`https://placehold.co/100x100/E2E8F0/1E293B?text=Img${img}`} alt={`Thumb ${img}`} className="w-full h-full object-cover" />
+                  <img src={img} alt={`Foto ${index + 1} ${title}`} className="w-full h-full object-cover" />
                 </div>
               ))}
             </div>
@@ -42,30 +53,25 @@ export default function ProductPage() {
 
           {/* Product Info */}
           <div className="w-full lg:w-1/3 flex-grow">
-            <h1 className="text-2xl font-bold text-gray-900 mb-2">iPhone 13 Pro Max 256GB - Mulus Like New</h1>
-            <p className="text-3xl font-extrabold text-loak-blue mb-4">Rp 14.500.000</p>
+            {error ? <p className="mb-3 text-sm text-red-600">{error}</p> : null}
+            <h1 className="text-2xl font-bold text-gray-900 mb-2">{title}</h1>
+            <p className="text-3xl font-extrabold text-loak-blue mb-4">{product ? `Rp ${product.price.toLocaleString('id-ID')}` : ''}</p>
             
             <div className="flex items-center text-sm text-gray-600 mb-6">
-              <span className="bg-green-100 text-green-700 px-2 py-1 rounded-md text-xs font-semibold mr-3">Bekas</span>
-              <MapPin className="w-4 h-4 mr-1 text-gray-400" /> Jakarta Selatan
+              <span className="bg-green-100 text-green-700 px-2 py-1 rounded-md text-xs font-semibold mr-3">{product?.condition || 'Bekas'}</span>
+              <MapPin className="w-4 h-4 mr-1 text-gray-400" /> {product?.location || ''}
             </div>
 
             <div className="border-t border-b py-4 mb-6">
               <h3 className="font-bold text-gray-900 mb-2">Detail Produk</h3>
               <ul className="text-sm text-gray-600 space-y-2 mb-4">
-                <li><span className="text-gray-400 w-24 inline-block">Kondisi:</span> Bekas (Mulus 99%)</li>
-                <li><span className="text-gray-400 w-24 inline-block">Berat:</span> 500 Gram</li>
-                <li><span className="text-gray-400 w-24 inline-block">Kategori:</span> Handphone</li>
+                <li><span className="text-gray-400 w-24 inline-block">Kondisi:</span> {product?.condition || '-'}</li>
+                <li><span className="text-gray-400 w-24 inline-block">Kategori:</span> {product?.category || '-'}</li>
               </ul>
 
               <h3 className="font-bold text-gray-900 mb-2">Deskripsi</h3>
               <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-line">
-                Jual iPhone 13 Pro Max 256GB ex iBox.{'\n'}
-                Kondisi sangat mulus like new, tidak ada lecet/dent.{'\n'}
-                Battery Health 89%.{'\n'}
-                Kelengkapan fullset original bawaan.{'\n'}
-                Fungsi normal 100%, True Tone on, Face ID on.{'\n'}
-                Bisa rekber via LoakinAja biar aman.
+                {product?.description || ''}
               </p>
             </div>
             
@@ -89,8 +95,8 @@ export default function ProductPage() {
                   S
                 </div>
                 <div>
-                  <p className="font-bold text-sm text-gray-900">SellerAja</p>
-                  <p className="text-xs text-gray-500">Aktif 5 menit lalu</p>
+                  <p className="font-bold text-sm text-gray-900">{product?.seller?.name || 'Penjual'}</p>
+                  <p className="text-xs text-gray-500">Penjual LoakinAja</p>
                 </div>
               </div>
 

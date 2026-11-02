@@ -2,6 +2,19 @@ This is a [Next.js](https://nextjs.org/) project bootstrapped with [`create-next
 
 ## Getting Started
 
+### API connection
+
+The frontend uses the Express backend in `../loakinaja_api`. Copy `.env.example`
+to `.env.local` and set `NEXT_PUBLIC_API_URL` (default:
+`http://localhost:4000/api`). Start MySQL and the backend first, then run the
+frontend with `npm run dev`. Account and listing data are served by the API;
+payment orders and OTP password recovery are not enabled until their backend
+endpoints are available. The old local `.env` is only for the Next.js admin
+demo routes; do not use its placeholder admin credentials for deployment.
+Admin sign-in and listing review use the Express API; set `ADMIN_EMAIL` and
+`ADMIN_PASSWORD` in the backend environment. New listings remain pending until
+approved in `/admin`.
+
 First, run the development server:
 
 ```bash

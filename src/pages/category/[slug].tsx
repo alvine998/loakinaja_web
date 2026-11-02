@@ -3,6 +3,7 @@ import Head from 'next/head';
 import { useRouter } from 'next/router';
 import Link from 'next/link';
 import { Filter, ChevronDown } from 'lucide-react';
+import { getListings, Listing } from '@/lib/db';
 
 interface FilterSectionProps {
   title: string;
@@ -37,6 +38,23 @@ export default function CategoryPage() {
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [sortOpen, setSortOpen] = useState(false);
   const [sortBy, setSortBy] = useState('terbaru');
+  const [products, setProducts] = useState<Listing[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState('');
+
+  useEffect(() => {
+    if (!router.isReady) return;
+    const name = typeof slug === 'string' ? slug.replace(/-/g, ' ') : '';
+    const category = name && name.toLowerCase() !== 'semua'
+      ? name.replace(/\b\w/g, (letter) => letter.toUpperCase())
+      : undefined;
+    const q = typeof router.query.q === 'string' ? router.query.q : undefined;
+    setLoading(true);
+    getListings({ category, q, limit: 50 })
+      .then(setProducts)
+      .catch((error: Error) => setLoadError(error.message))
+      .finally(() => setLoading(false));
+  }, [router.isReady, slug, router.query.q]);
 
   useEffect(() => {
     document.body.style.overflow = filtersOpen ? 'hidden' : '';
@@ -45,21 +63,12 @@ export default function CategoryPage() {
     };
   }, [filtersOpen]);
 
-  const products = [
-    { id: 1, title: 'iPhone 13 Pro Max 256GB - Mulus Like New', price: 'Rp 14.500.000', location: 'Jakarta Selatan', image: 'https://placehold.co/400x300/E2E8F0/1E293B?text=iPhone' },
-    { id: 2, title: 'Macbook Pro M1 2020 8/256GB', price: 'Rp 11.200.000', location: 'Bandung', image: 'https://placehold.co/400x300/E2E8F0/1E293B?text=Macbook' },
-    { id: 3, title: 'iPad Pro 11 inch 2021 M1', price: 'Rp 10.000.000', location: 'Surabaya', image: 'https://placehold.co/400x300/E2E8F0/1E293B?text=iPad' },
-    { id: 4, title: 'Samsung Galaxy S22 Ultra 256GB', price: 'Rp 12.500.000', location: 'Yogyakarta', image: 'https://placehold.co/400x300/E2E8F0/1E293B?text=Samsung' },
-  ];
-
   const locations = ['Jabodetabek', 'Bandung', 'Surabaya', 'Semarang'];
 
-  const parsePrice = (p: string) => Number(p.replace(/[^0-9]/g, ''));
-
   const sortedProducts = [...products].sort((a, b) => {
-    if (sortBy === 'termurah') return parsePrice(a.price) - parsePrice(b.price);
-    if (sortBy === 'termahal') return parsePrice(b.price) - parsePrice(a.price);
-    return a.id - b.id;
+    if (sortBy === 'termurah') return a.price - b.price;
+    if (sortBy === 'termahal') return b.price - a.price;
+    return Date.parse(b.createdAt) - Date.parse(a.createdAt);
   });
 
   const sortOptions: { value: string; label: string }[] = [
@@ -184,22 +193,24 @@ export default function CategoryPage() {
             </div>
           </div>
 
+          {loadError && <p className="mb-4 text-sm text-red-600">{loadError}</p>}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
             {sortedProducts.map((product) => (
               <Link href={`/product/${product.id}`} key={product.id}>
                 <div className="bg-white border border-gray-100 rounded-xl overflow-hidden hover:shadow-lg transition-all h-full flex flex-col group">
                   <div className="relative h-48 w-full bg-gray-100 overflow-hidden">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={product.image} alt={product.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                    <img src={product.images?.[0] || `https://placehold.co/400x300/E2E8F0/1E293B?text=${encodeURIComponent(product.category)}`} alt={product.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
                   </div>
                   <div className="p-4 flex flex-col flex-grow">
                     <h3 className="text-sm text-gray-800 line-clamp-2 mb-2 font-medium">{product.title}</h3>
-                    <p className="text-loak-blue font-bold text-lg mt-auto mb-1">{product.price}</p>
+                    <p className="text-loak-blue font-bold text-lg mt-auto mb-1">Rp {product.price.toLocaleString('id-ID')}</p>
                     <p className="text-xs text-gray-500">{product.location}</p>
                   </div>
                 </div>
               </Link>
             ))}
+            {!loading && sortedProducts.length === 0 && <p className="col-span-full py-12 text-center text-sm text-gray-500">Belum ada iklan untuk kategori ini.</p>}
           </div>
         </main>
       </div>

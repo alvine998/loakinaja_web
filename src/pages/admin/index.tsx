@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
+import { adminRequest, clearAdminToken } from '@/lib/adminApi';
 import {
   Activity,
   ArrowUpRight,
@@ -13,7 +14,6 @@ import {
   CircleDollarSign,
   Clock3,
   Coins,
-  Database,
   Eye,
   GitBranch,
   LayoutDashboard,
@@ -29,7 +29,7 @@ import {
 } from 'lucide-react';
 
 type AdminUser = { id: string; name: string; email: string; phone: string; tokens?: number; password?: string; referralCode?: string; referredBy?: string; createdAt: string };
-type AdminListing = { id: string; userId: string; title: string; category: string; price: number; condition?: string; description?: string; location?: string; images?: string[]; status: 'active' | 'sold'; createdAt: string };
+type AdminListing = { id: string; userId: string; title: string; category: string; price: number; condition?: string; description?: string; location?: string; images?: string[]; status: 'pending' | 'active' | 'rejected' | 'sold'; reviewReason?: string | null; createdAt: string; seller?: AdminUser };
 type AdminOrder = { id: string; userId: string; packageId?: string; packageLabel: string; tokens?: number; pricePerToken?: number; amount: number; method?: string; paymentCode?: string; status: string; createdAt: string; expiresAt?: string; paidAt?: string };
 type AdminData = { users: AdminUser[]; listings: AdminListing[]; orders: AdminOrder[] };
 type Section = 'overview' | 'users' | 'listings' | 'orders' | 'referrals';
@@ -187,37 +187,25 @@ export default function AdminDashboard() {
   const [notice, setNotice] = useState('');
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
-  const [demoSeeded, setDemoSeeded] = useState(false);
-  const [seeding, setSeeding] = useState(false);
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
   const [collapsedIds, setCollapsedIds] = useState<Set<string>>(new Set());
 
   const loadDashboard = useCallback(async () => {
-    const response = await fetch('/api/admin/session');
-    if (!(response.headers.get('content-type') || '').includes('application/json')) {
-      throw new Error(
-        'Admin API tidak tersedia. Jalankan aplikasi dengan server Next.js (npm run dev/start); static export tidak mendukung admin login.'
-      );
-    }
-    const session = await response.json();
-    if (!session.authenticated) {
+    try {
+      await adminRequest<{ authenticated: boolean }>('/admin/session');
+    } catch {
+      clearAdminToken();
       await router.replace('/admin/login');
       return;
     }
-    setData({
-      users: readLocal<AdminUser>('loakinaja_users'),
-      listings: readLocal<AdminListing>('loakinaja_listings'),
-      orders: readLocal<AdminOrder>('loakinaja_token_orders'),
-    });
-    setDemoSeeded(window.localStorage.getItem('loakinaja_admin_demo_seeded') === 'true');
+    const response = await adminRequest<{ data: AdminData }>('/admin/dashboard');
+    setData(response.data);
     setLoading(false);
   }, [router]);
 
   useEffect(() => {
     loadDashboard().catch(() => {
-      setError(
-        'Admin API tidak tersedia. Jalankan aplikasi dengan server Next.js (npm run dev/start); static hosting tidak mendukung admin login.'
-      );
+      setError('Gagal memuat dashboard admin. Periksa koneksi backend lalu coba lagi.');
       setLoading(false);
     });
   }, [loadDashboard]);
@@ -295,45 +283,29 @@ export default function AdminDashboard() {
 
   const handleLogout = async () => {
     setLoggingOut(true);
-    try {
-      await fetch('/api/admin/logout', { method: 'POST' });
-    } finally {
-      await router.replace('/admin/login');
-    }
+    clearAdminToken();
+    await router.replace('/admin/login');
   };
 
-  const hasDemoData = useMemo(
-    () =>
-      data.users.some((u) => u.id.startsWith('demo-user-')) ||
-      data.listings.some((l) => l.id.startsWith('demo-listing-')) ||
-      data.orders.some((o) => o.id.startsWith('demo-order-')),
-    [data]
-  );
-
-  const handleSeedDemoData = () => {
-    setError('');
-    setNotice('');
-    setSeeding(true);
-    try {
-      const demoData = seedDemoData();
-      setData(demoData);
-      setDemoSeeded(true);
-      setNotice(`Demo data berhasil ditambahkan (${demoData.users.length} pengguna, ${demoData.listings.length} listing, ${demoData.orders.length} transaksi).`);
-    } catch (err) {
-      setError((err as Error).message);
-    } finally {
-      setSeeding(false);
-    }
-  };
-
-  const handleClearDemoData = () => {
+  const handleReviewListing = async (listing: AdminListing, decision: 'approve' | 'reject') => {
     setError('');
     setNotice('');
     try {
-      const next = clearDemoData(data);
-      setData(next);
-      setDemoSeeded(false);
-      setNotice('Demo data berhasil dihapus dari browser ini.');
+      let reason: string | undefined;
+      if (decision === 'reject') {
+        const input = window.prompt('Alasan penolakan (opsional):');
+        if (input === null) return;
+        reason = input || undefined;
+      }
+      const response = await adminRequest<{ data: AdminListing }>(`/admin/listings/${encodeURIComponent(listing.id)}/review`, {
+        method: 'PATCH',
+        body: JSON.stringify({ decision, reason }),
+      });
+      setData((current) => ({
+        ...current,
+        listings: current.listings.map((item) => item.id === listing.id ? response.data : item),
+      }));
+      setNotice(decision === 'approve' ? 'Listing disetujui dan sudah tayang.' : 'Listing ditolak.');
     } catch (err) {
       setError((err as Error).message);
     }
@@ -383,7 +355,7 @@ export default function AdminDashboard() {
             {notice && <div role="status" className="mb-5 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">{notice}</div>}
             {loading ? <div className="rounded-2xl border border-slate-200 bg-white p-12 text-center text-sm text-slate-500">Memuat dashboard...</div> : <>
               {section === 'overview' ? <>
-                <div className="mb-7 flex flex-col justify-between gap-3 sm:flex-row sm:items-end"><div><h2 className="text-xl font-bold tracking-tight">Ringkasan platform</h2><p className="mt-1 text-sm text-slate-500">Pantau pertumbuhan dan aktivitas marketplace.</p></div><div className="flex flex-wrap items-center gap-2"><div className="inline-flex w-fit items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-500"><Activity className="h-3.5 w-3.5 text-emerald-600" /> Data browser saat ini</div><button type="button" onClick={handleSeedDemoData} disabled={seeding} className="inline-flex min-h-9 items-center justify-center gap-2 rounded-lg bg-blue-700 px-3 py-2 text-xs font-semibold text-white transition hover:bg-blue-800 disabled:cursor-wait disabled:opacity-60"><Database className="h-3.5 w-3.5" />{seeding ? 'Menambahkan...' : hasDemoData ? 'Perbarui demo data' : 'Tambah demo data'}</button>{hasDemoData && <button type="button" onClick={handleClearDemoData} className="inline-flex min-h-9 items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-500 transition hover:bg-slate-50 hover:text-red-600"><X className="h-3.5 w-3.5" />Hapus demo</button>}</div></div>
+                <div className="mb-7 flex flex-col justify-between gap-3 sm:flex-row sm:items-end"><div><h2 className="text-xl font-bold tracking-tight">Ringkasan platform</h2><p className="mt-1 text-sm text-slate-500">Pantau listing dan aktivitas marketplace.</p></div><div className="inline-flex w-fit items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-500"><Activity className="h-3.5 w-3.5 text-emerald-600" /> Data dari backend</div></div>
                 <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
                   <MetricCard title="Total pengguna" value={data.users.length.toLocaleString('id-ID')} note="Akun terdaftar di platform" icon={Users} tone="bg-blue-50 text-blue-700" />
                   <MetricCard title="Listing aktif" value={activeListings.toLocaleString('id-ID')} note={`${data.listings.length.toLocaleString('id-ID')} listing secara keseluruhan`} icon={ShoppingBag} tone="bg-violet-50 text-violet-700" />
@@ -397,7 +369,8 @@ export default function AdminDashboard() {
                     {data.users.length ? <div className="divide-y divide-slate-100">{[...data.users].sort((a, b) => b.createdAt.localeCompare(a.createdAt)).slice(0, 5).map((user) => <button key={user.id} type="button" onClick={() => setSelectedUserId(user.id)} className="flex w-full items-center justify-between gap-3 px-5 py-3.5 text-left transition hover:bg-slate-50"><div className="flex min-w-0 items-center gap-3"><div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-slate-100 text-xs font-bold text-slate-600">{user.name.slice(0, 1).toUpperCase()}</div><div className="min-w-0"><p className="truncate text-sm font-semibold text-slate-700">{user.name}</p><p className="truncate text-xs text-slate-400">{user.email}</p></div></div><span className="flex shrink-0 items-center gap-2 text-xs text-slate-400">{formatDate(user.createdAt)}<Eye className="h-4 w-4 text-slate-300" /></span></button>)}</div> : <div className="px-5 py-12 text-center text-sm text-slate-400">Belum ada pengguna terdaftar.</div>}
                   </section>
                   <section className="rounded-2xl border border-slate-200 bg-white p-5"><div className="flex items-start justify-between"><div><h3 className="text-sm font-bold">Aktivitas marketplace</h3><p className="mt-0.5 text-xs text-slate-400">Snapshot kondisi platform</p></div><span className="rounded-lg bg-slate-50 p-2 text-slate-500"><Activity className="h-4 w-4" /></span></div>
-                    <div className="mt-5 space-y-4"><div className="flex items-center justify-between rounded-xl bg-blue-50/70 p-3.5"><div className="flex items-center gap-3"><span className="rounded-lg bg-white p-2 text-blue-700"><Box className="h-4 w-4" /></span><div><p className="text-xs font-semibold text-slate-700">Listing tayang</p><p className="text-[11px] text-slate-400">Siap dilihat pembeli</p></div></div><span className="text-sm font-bold text-slate-800">{activeListings}</span></div>
+                      <div className="mt-5 space-y-4"><div className="flex items-center justify-between rounded-xl bg-amber-50/70 p-3.5"><div className="flex items-center gap-3"><span className="rounded-lg bg-white p-2 text-amber-700"><Clock3 className="h-4 w-4" /></span><div><p className="text-xs font-semibold text-slate-700">Menunggu verifikasi</p><p className="text-[11px] text-slate-400">Listing baru</p></div></div><span className="text-sm font-bold text-slate-800">{data.listings.filter((listing) => listing.status === 'pending').length}</span></div>
+                        <div className="flex items-center justify-between rounded-xl bg-blue-50/70 p-3.5"><div className="flex items-center gap-3"><span className="rounded-lg bg-white p-2 text-blue-700"><Box className="h-4 w-4" /></span><div><p className="text-xs font-semibold text-slate-700">Listing tayang</p><p className="text-[11px] text-slate-400">Siap dilihat pembeli</p></div></div><span className="text-sm font-bold text-slate-800">{activeListings}</span></div>
                       <div className="flex items-center justify-between rounded-xl bg-amber-50/70 p-3.5"><div className="flex items-center gap-3"><span className="rounded-lg bg-white p-2 text-amber-700"><Clock3 className="h-4 w-4" /></span><div><p className="text-xs font-semibold text-slate-700">Menunggu pembayaran</p><p className="text-[11px] text-slate-400">Pesanan token pending</p></div></div><span className="text-sm font-bold text-slate-800">{data.orders.filter((order) => order.status === 'pending').length}</span></div>
                       <div className="flex items-center justify-between rounded-xl bg-emerald-50/70 p-3.5"><div className="flex items-center gap-3"><span className="rounded-lg bg-white p-2 text-emerald-700"><Check className="h-4 w-4" /></span><div><p className="text-xs font-semibold text-slate-700">Listing terjual</p><p className="text-[11px] text-slate-400">Ditandai selesai oleh penjual</p></div></div><span className="text-sm font-bold text-slate-800">{data.listings.filter((listing) => listing.status === 'sold').length}</span></div>
                     </div>
@@ -421,7 +394,7 @@ export default function AdminDashboard() {
                 <div className="mb-6 flex flex-col justify-between gap-4 sm:flex-row sm:items-end"><div><h2 className="text-xl font-bold tracking-tight">{heading}</h2><p className="mt-1 text-sm text-slate-500">Kelola dan tinjau data {heading.toLowerCase()} platform.</p></div><label className="relative block w-full sm:w-72"><Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" /><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder={`Cari ${heading.toLowerCase()}...`} className="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-9 pr-3 text-sm outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-50" /></label></div>
                 <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white"><div className="flex items-center justify-between border-b border-slate-100 px-5 py-4"><p className="text-sm font-semibold text-slate-700">Semua {heading.toLowerCase()}</p><span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-500">{currentItems.length} data</span></div><div className="overflow-x-auto">
                   {section === 'users' && <table className="w-full min-w-[860px] text-left text-xs"><TableHead cells={['PENGGUNA', 'KONTAK', 'KODE REFERRAL', 'DIAJAK OLEH', 'BERGABUNG', 'AKSI']} /><tbody className="divide-y divide-slate-100">{(currentItems as AdminUser[]).map((user) => { const referrer = data.users.find((candidate) => candidate.id === user.referredBy); return <tr key={user.id} className="transition hover:bg-slate-50/70"><td className="px-5 py-4"><div className="flex items-center gap-3"><span className="flex h-9 w-9 items-center justify-center rounded-full bg-blue-50 font-bold text-blue-700">{user.name.slice(0, 1).toUpperCase()}</span><button type="button" onClick={() => setSelectedUserId(user.id)} className="font-semibold text-slate-700 hover:text-blue-700 hover:underline">{user.name}</button></div></td><td className="px-5 py-4 text-slate-500">{user.email}<span className="mt-1 block text-slate-400">{user.phone}</span></td><td className="px-5 py-4 font-mono font-semibold text-blue-700">{user.referralCode || '—'}</td><td className="px-5 py-4 text-slate-500">{referrer?.name || '—'}</td><td className="px-5 py-4 text-slate-500">{formatDate(user.createdAt)}</td><td className="px-5 py-4"><button type="button" onClick={() => setSelectedUserId(user.id)} className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 font-semibold text-slate-600 transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700"><Eye className="h-3.5 w-3.5" />Detail</button></td></tr>; })}</tbody></table>}
-                  {section === 'listings' && <table className="w-full min-w-[650px] text-left text-xs"><TableHead cells={['PRODUK', 'KATEGORI', 'TANGGAL', 'STATUS', 'HARGA']} /><tbody className="divide-y divide-slate-100">{(currentItems as AdminListing[]).map((listing) => <tr key={listing.id}><td className="px-5 py-4 font-semibold text-slate-700">{listing.title}</td><td className="px-5 py-4 text-slate-500">{listing.category}</td><td className="px-5 py-4 text-slate-500">{formatDate(listing.createdAt)}</td><td className="px-5 py-4"><StatusPill status={listing.status} /></td><td className="px-5 py-4 text-right font-semibold text-slate-700">{rupiah(listing.price)}</td></tr>)}</tbody></table>}
+                   {section === 'listings' && <table className="w-full min-w-[900px] text-left text-xs"><TableHead cells={['PRODUK', 'PENJUAL', 'KATEGORI', 'TANGGAL', 'STATUS', 'HARGA', 'TINDAKAN']} /><tbody className="divide-y divide-slate-100">{(currentItems as AdminListing[]).map((listing) => <tr key={listing.id}><td className="max-w-56 px-5 py-4"><span className="block truncate font-semibold text-slate-700">{listing.title}</span>{listing.reviewReason && <span className="mt-1 block text-red-600">Alasan: {listing.reviewReason}</span>}</td><td className="px-5 py-4 text-slate-500">{listing.seller?.name || data.users.find((user) => user.id === listing.userId)?.name || '—'}</td><td className="px-5 py-4 text-slate-500">{listing.category}</td><td className="px-5 py-4 text-slate-500">{formatDate(listing.createdAt)}</td><td className="px-5 py-4"><StatusPill status={listing.status} /></td><td className="px-5 py-4 text-right font-semibold text-slate-700">{rupiah(listing.price)}</td><td className="px-5 py-4">{listing.status === 'pending' ? <div className="flex items-center gap-2"><button type="button" onClick={() => handleReviewListing(listing, 'approve')} className="rounded-lg bg-emerald-600 px-2.5 py-1.5 font-semibold text-white hover:bg-emerald-700">Setujui</button><button type="button" onClick={() => handleReviewListing(listing, 'reject')} className="rounded-lg border border-red-200 px-2.5 py-1.5 font-semibold text-red-600 hover:bg-red-50">Tolak</button></div> : <span className="text-slate-400">—</span>}</td></tr>)}</tbody></table>}
                   {section === 'orders' && <table className="w-full min-w-[650px] text-left text-xs"><TableHead cells={['PESANAN', 'PAKET', 'TANGGAL', 'STATUS', 'NOMINAL']} /><tbody className="divide-y divide-slate-100">{(currentItems as AdminOrder[]).map((order) => <tr key={order.id}><td className="px-5 py-4 font-semibold text-slate-700">#{order.id.slice(-8)}</td><td className="px-5 py-4 text-slate-500">{order.packageLabel}</td><td className="px-5 py-4 text-slate-500">{formatDate(order.createdAt)}</td><td className="px-5 py-4"><StatusPill status={order.status} /></td><td className="px-5 py-4 text-right font-semibold text-slate-700">{rupiah(order.amount)}</td></tr>)}</tbody></table>}
                   {currentItems.length === 0 && <div className="px-5 py-14 text-center"><div className="mx-auto flex h-11 w-11 items-center justify-center rounded-xl bg-slate-50 text-slate-400"><Search className="h-5 w-5" /></div><p className="mt-3 text-sm font-semibold text-slate-700">Data tidak ditemukan</p><p className="mt-1 text-xs text-slate-400">Belum ada data atau coba kata kunci lain.</p></div>}
                 </div></div>
@@ -628,12 +601,13 @@ function TableHead({ cells }: { cells: string[] }) {
 function StatusPill({ status }: { status: string }) {
   const styles: Record<string, string> = {
     active: 'bg-emerald-50 text-emerald-700',
+    rejected: 'bg-red-50 text-red-700',
     sold: 'bg-slate-100 text-slate-600',
     paid: 'bg-emerald-50 text-emerald-700',
     pending: 'bg-amber-50 text-amber-700',
     failed: 'bg-red-50 text-red-700',
     expired: 'bg-slate-100 text-slate-500',
   };
-  const labels: Record<string, string> = { active: 'Aktif', sold: 'Terjual', paid: 'Lunas', pending: 'Menunggu', failed: 'Gagal', expired: 'Kedaluwarsa' };
+  const labels: Record<string, string> = { active: 'Aktif', pending: 'Menunggu review', rejected: 'Ditolak', sold: 'Terjual', paid: 'Lunas', failed: 'Gagal', expired: 'Kedaluwarsa' };
   return <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 font-semibold ${styles[status] || 'bg-slate-100 text-slate-600'}`}><span className="h-1.5 w-1.5 rounded-full bg-current" />{labels[status] || status}</span>;
 }

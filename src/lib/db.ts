@@ -1,7 +1,6 @@
-// Mock backend layer for LoakinAja.
-// All data is persisted in localStorage so the app works without a server.
-// Every function returns a Promise so the implementation can later be swapped
-// for a real HTTP/API client without touching the calling code.
+// Data access layer for the LoakinAja API. Payment and OTP features remain
+// local demo flows until matching backend endpoints are implemented.
+import { apiRequest, ApiError, clearAuthToken, getAuthToken, saveAuthToken } from './api';
 
 export interface User {
   id: string;
@@ -39,6 +38,7 @@ export interface Listing {
   images: string[];
   createdAt: string;
   status: ListingStatus;
+  seller?: { id: string; name: string; createdAt: string };
 }
 
 export interface ListingInput {
@@ -49,6 +49,7 @@ export interface ListingInput {
   description: string;
   location: string;
   images?: string[];
+  imageFiles?: File[];
 }
 
 export interface TokenPackage {
@@ -224,87 +225,52 @@ export async function registerUser(input: {
   password: string;
   referralCode?: string;
 }): Promise<Omit<User, 'password'>> {
-  const users = read<User[]>(KEY_USERS, []);
-  ensureReferralCodes(users);
-  const email = input.email.trim().toLowerCase();
-  if (users.some((u) => u.email === email)) {
-    throw new Error('Email sudah terdaftar.');
-  }
-  const referrer = input.referralCode?.trim()
-    ? users.find(
-        (candidate) =>
-          candidate.referralCode?.toLowerCase() === input.referralCode?.trim().toLowerCase()
-      )
-    : undefined;
-  if (input.referralCode?.trim() && !referrer) {
-    throw new Error('Kode referral tidak ditemukan. Periksa kembali kode yang dimasukkan.');
-  }
-  const user: User = {
-    id: uid(),
-    name: input.name.trim(),
-    email,
-    phone: input.phone.trim(),
-    password: input.password,
-    tokens: FREE_TOKENS_ON_REGISTER,
-    createdAt: new Date().toISOString(),
-    referralCode: createReferralCode(users),
-    ...(referrer ? { referredBy: referrer.id } : {}),
-  };
-  users.push(user);
-  write(KEY_USERS, users);
-  write(KEY_SESSION, user.id);
-  return publicUser(user);
+  const result = await apiRequest<{ user: Omit<User, 'password'>; token: string }>('/auth/register', {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
+  saveAuthToken(result.token);
+  return result.user;
 }
 
 export async function loginUser(
   email: string,
   password: string
 ): Promise<Omit<User, 'password'>> {
-  const users = read<User[]>(KEY_USERS, []);
-  const user = users.find(
-    (u) => u.email === email.trim().toLowerCase() && u.password === password
-  );
-  if (!user) {
-    throw new Error('Email atau password salah.');
-  }
-  write(KEY_SESSION, user.id);
-  return publicUser(user);
+  const result = await apiRequest<{ user: Omit<User, 'password'>; token: string }>('/auth/login', {
+    method: 'POST',
+    body: JSON.stringify({ email, password }),
+  });
+  saveAuthToken(result.token);
+  return result.user;
 }
 
 export async function logoutUser(): Promise<void> {
-  if (isBrowser) window.localStorage.removeItem(KEY_SESSION);
+  clearAuthToken();
 }
 
 export async function verifyPasswordCredentials(
   emailOrPhone: string,
   password: string
 ): Promise<string> {
-  const key = normalizeIdentifier(emailOrPhone);
-  const users = read<User[]>(KEY_USERS, []);
-  const user = users.find(
-    (u) => (u.email === key || u.phone === key) && u.password === password
-  );
-  if (!user) {
-    throw new Error('Email atau password salah.');
-  }
-  return delay(user.email);
+  await loginUser(emailOrPhone, password);
+  return emailOrPhone.trim().toLowerCase();
 }
 
 export async function getCurrentUser(): Promise<Omit<User, 'password'> | null> {
-  const id = read<string | null>(KEY_SESSION, null);
-  if (!id) return delay(null);
-  const users = read<User[]>(KEY_USERS, []);
-  ensureReferralCodes(users);
-  const user = users.find((u) => u.id === id);
-  return delay(user ? publicUser(user) : null);
+  if (!getAuthToken()) return null;
+  try {
+    const result = await apiRequest<{ user: Omit<User, 'password'> }>('/auth/me');
+    return result.user;
+  } catch (error) {
+    if (error instanceof ApiError && error.status === 401) clearAuthToken();
+    return null;
+  }
 }
 
 export async function getMyReferralCount(): Promise<number> {
-  const id = read<string | null>(KEY_SESSION, null);
-  if (!id) return delay(0);
-  const users = read<User[]>(KEY_USERS, []);
-  ensureReferralCodes(users);
-  return delay(users.filter((user) => user.referredBy === id).length);
+  const result = await apiRequest<{ count: number }>('/auth/referral-count');
+  return result.count;
 }
 
 export async function updateProfile(input: {
@@ -312,59 +278,21 @@ export async function updateProfile(input: {
   email: string;
   phone: string;
 }): Promise<Omit<User, 'password'>> {
-  const id = read<string | null>(KEY_SESSION, null);
-  if (!id) throw new Error('Anda harus masuk terlebih dahulu.');
-
-  const name = input.name.trim();
-  const email = input.email.trim().toLowerCase();
-  const phone = input.phone.trim();
-
-  if (!name) throw new Error('Nama tidak boleh kosong.');
-  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-    throw new Error('Format email tidak valid.');
-  }
-  if (!phone) throw new Error('Nomor telepon tidak boleh kosong.');
-
-  const users = read<User[]>(KEY_USERS, []);
-  const idx = users.findIndex((u) => u.id === id);
-  if (idx === -1) throw new Error('Akun tidak ditemukan.');
-
-  if (users.some((u) => u.id !== id && u.email === email)) {
-    throw new Error('Email sudah digunakan akun lain.');
-  }
-  if (users.some((u) => u.id !== id && u.phone === phone)) {
-    throw new Error('Nomor telepon sudah digunakan akun lain.');
-  }
-
-  users[idx] = { ...users[idx], name, email, phone };
-  write(KEY_USERS, users);
-  return delay(publicUser(users[idx]));
+  const result = await apiRequest<{ user: Omit<User, 'password'> }>('/auth/me', {
+    method: 'PATCH',
+    body: JSON.stringify(input),
+  });
+  return result.user;
 }
 
 export async function changePassword(
   currentPassword: string,
   newPassword: string
 ): Promise<void> {
-  const id = read<string | null>(KEY_SESSION, null);
-  if (!id) throw new Error('Anda harus masuk terlebih dahulu.');
-
-  const users = read<User[]>(KEY_USERS, []);
-  const idx = users.findIndex((u) => u.id === id);
-  if (idx === -1) throw new Error('Akun tidak ditemukan.');
-
-  if (users[idx].password !== currentPassword) {
-    throw new Error('Password saat ini salah.');
-  }
-  if (newPassword.length < 8) {
-    throw new Error('Password baru minimal 8 karakter.');
-  }
-  if (newPassword === currentPassword) {
-    throw new Error('Password baru harus berbeda dari password saat ini.');
-  }
-
-  users[idx] = { ...users[idx], password: newPassword };
-  write(KEY_USERS, users);
-  return delay(undefined);
+  await apiRequest<void>('/auth/change-password', {
+    method: 'POST',
+    body: JSON.stringify({ currentPassword, newPassword }),
+  });
 }
 
 // ---------- OTP (mock) ----------
@@ -645,99 +573,62 @@ export async function failTokenOrder(orderId: string): Promise<TokenOrder> {
 // ---------- Listings ----------
 
 export async function getMyListings(): Promise<Listing[]> {
-  const id = read<string | null>(KEY_SESSION, null);
-  if (!id) return delay([]);
-  const listings = read<Listing[]>(KEY_LISTINGS, []);
-  return delay(
-    listings
-      .filter((l) => l.userId === id)
-      .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
-  );
+  const result = await apiRequest<{ data: Listing[] }>('/listings/mine');
+  return result.data;
 }
 
 export async function createListing(input: ListingInput): Promise<Listing> {
-  const id = read<string | null>(KEY_SESSION, null);
-  if (!id) throw new Error('Anda harus masuk untuk memasang iklan.');
-  const users = read<User[]>(KEY_USERS, []);
-  const idx = users.findIndex((u) => u.id === id);
-  if (idx === -1) throw new Error('Akun tidak ditemukan.');
-  if (users[idx].tokens < 1) {
-    throw new Error('Token tidak cukup. Beli token untuk memasang iklan.');
-  }
-
-  const images = input.images?.length
-    ? input.images
-    : [placeholderImage(input.category)];
-
-  const listing: Listing = {
-    id: uid(),
-    userId: id,
-    title: input.title.trim(),
-    category: input.category,
-    price: input.price,
-    condition: input.condition,
-    description: input.description.trim(),
-    location: input.location.trim(),
-    images,
-    createdAt: new Date().toISOString(),
-    status: 'active',
-  };
-
-  // Persist the (potentially large) listing first so a storage quota error
-  // cannot cost the user a token.
-  const listings = read<Listing[]>(KEY_LISTINGS, []);
-  listings.push(listing);
-  write(KEY_LISTINGS, listings);
-
-  // Deduct 1 token for 1 ad.
-  users[idx].tokens -= 1;
-  write(KEY_USERS, users);
-
-  return delay(listing);
+  const body = new FormData();
+  body.set('title', input.title);
+  body.set('category', input.category);
+  body.set('price', String(input.price));
+  body.set('condition', input.condition);
+  body.set('description', input.description);
+  body.set('location', input.location);
+  (input.imageFiles || []).forEach((file) => body.append('images', file));
+  const result = await apiRequest<{ data: Listing }>('/listings', { method: 'POST', body });
+  return result.data;
 }
 
 export async function updateListing(
   listingId: string,
   input: ListingInput
 ): Promise<Listing> {
-  const listings = read<Listing[]>(KEY_LISTINGS, []);
-  const idx = listings.findIndex((l) => l.id === listingId);
-  if (idx === -1) throw new Error('Iklan tidak ditemukan.');
-
-  const images = input.images?.length ? input.images : listings[idx].images;
-
-  listings[idx] = {
-    ...listings[idx],
-    title: input.title.trim(),
-    category: input.category,
-    price: input.price,
-    condition: input.condition,
-    description: input.description.trim(),
-    location: input.location.trim(),
-    images: images.length ? images : [placeholderImage(input.category)],
-  };
-  write(KEY_LISTINGS, listings);
-  return delay(listings[idx]);
+  const result = await apiRequest<{ data: Listing }>(`/listings/${encodeURIComponent(listingId)}`, {
+    method: 'PATCH',
+    body: JSON.stringify(input),
+  });
+  return result.data;
 }
 
 export async function setListingStatus(
   listingId: string,
   status: ListingStatus
 ): Promise<Listing> {
-  const listings = read<Listing[]>(KEY_LISTINGS, []);
-  const idx = listings.findIndex((l) => l.id === listingId);
-  if (idx === -1) throw new Error('Iklan tidak ditemukan.');
-  listings[idx] = { ...listings[idx], status };
-  write(KEY_LISTINGS, listings);
-  return delay(listings[idx]);
+  const result = await apiRequest<{ data: Listing }>(`/listings/${encodeURIComponent(listingId)}`, {
+    method: 'PATCH',
+    body: JSON.stringify({ status }),
+  });
+  return result.data;
 }
 
 export async function deleteListing(listingId: string): Promise<void> {
-  const listings = read<Listing[]>(KEY_LISTINGS, []);
-  const next = listings.filter((l) => l.id !== listingId);
-  if (next.length === listings.length) throw new Error('Iklan tidak ditemukan.');
-  write(KEY_LISTINGS, next);
-  return delay(undefined);
+  await apiRequest<void>(`/listings/${encodeURIComponent(listingId)}`, { method: 'DELETE' });
+}
+
+export async function getListings(options: { category?: string; q?: string; limit?: number } = {}): Promise<Listing[]> {
+  const params = new URLSearchParams();
+  if (options.category) params.set('category', options.category);
+  if (options.q) params.set('q', options.q);
+  if (options.limit) params.set('limit', String(options.limit));
+  const query = params.toString();
+  const result = await apiRequest<{ data: Listing[] }>(`/listings${query ? `?${query}` : ''}`);
+  return result.data;
+}
+
+export async function getListing(listingId: string): Promise<Listing> {
+  const result = await apiRequest<{ data: Listing }>(`/listings/${encodeURIComponent(listingId)}`);
+  return result.data;
 }
 
 function placeholderImage(category: string): string {

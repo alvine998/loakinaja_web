@@ -1,9 +1,17 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import SEO from '@/components/SEO';
 import Link from 'next/link';
-import { Smartphone, Monitor, Camera, Tv, Car, Home as HomeIcon, Search, ShieldCheck, BadgeCheck, Truck, ArrowRight, Star, Sparkles } from 'lucide-react';
+import { Smartphone, Monitor, Camera, Tv, Car, Home as HomeIcon, Search, ShieldCheck, BadgeCheck, Truck, ArrowRight, Sparkles } from 'lucide-react';
+import { getListings, Listing } from '@/lib/db';
 
 export default function Home() {
+  const [products, setProducts] = useState<Listing[]>([]);
+  const [search, setSearch] = useState('');
+
+  useEffect(() => {
+    getListings({ limit: 6 }).then(setProducts).catch(() => setProducts([]));
+  }, []);
+
   const categories = [
     { name: 'Handphone', icon: <Smartphone className="w-6 h-6 text-loak-blue" />, slug: 'handphone' },
     { name: 'Komputer', icon: <Monitor className="w-6 h-6 text-loak-blue" />, slug: 'komputer' },
@@ -11,15 +19,6 @@ export default function Home() {
     { name: 'Kamera', icon: <Camera className="w-6 h-6 text-loak-blue" />, slug: 'kamera' },
     { name: 'Otomotif', icon: <Car className="w-6 h-6 text-loak-blue" />, slug: 'otomotif' },
     { name: 'Properti', icon: <HomeIcon className="w-6 h-6 text-loak-blue" />, slug: 'properti' },
-  ];
-
-  const products = [
-    { id: 1, title: 'iPhone 13 Pro Max 256GB - Mulus Like New', price: 'Rp 14.500.000', location: 'Jakarta Selatan', condition: 'Like New', rating: 4.9, image: 'https://placehold.co/400x300/E2E8F0/1E293B?text=iPhone' },
-    { id: 2, title: 'Macbook Pro M1 2020 8/256GB', price: 'Rp 11.200.000', location: 'Bandung', condition: 'Sangat Baik', rating: 4.8, image: 'https://placehold.co/400x300/E2E8F0/1E293B?text=Macbook' },
-    { id: 3, title: 'Kamera Mirrorless Sony A6400', price: 'Rp 10.000.000', location: 'Surabaya', condition: 'Baik', rating: 4.7, image: 'https://placehold.co/400x300/E2E8F0/1E293B?text=Kamera' },
-    { id: 4, title: 'PS5 Digital Edition Bekas', price: 'Rp 7.500.000', location: 'Yogyakarta', condition: 'Sangat Baik', rating: 4.9, image: 'https://placehold.co/400x300/E2E8F0/1E293B?text=PS5' },
-    { id: 5, title: 'Honda Vario 150 2021', price: 'Rp 18.000.000', location: 'Semarang', condition: 'Baik', rating: 4.6, image: 'https://placehold.co/400x300/E2E8F0/1E293B?text=Vario' },
-    { id: 6, title: 'Monitor LG 24 Inch IPS', price: 'Rp 1.200.000', location: 'Malang', condition: 'Baik', rating: 4.8, image: 'https://placehold.co/400x300/E2E8F0/1E293B?text=Monitor' },
   ];
 
   const features = [
@@ -60,13 +59,18 @@ export default function Home() {
 
               {/* Inline search */}
               <form
-                onSubmit={(e) => e.preventDefault()}
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  window.location.href = `/category/semua?q=${encodeURIComponent(search)}`;
+                }}
                 className="mt-7 flex max-w-md items-center gap-2 rounded-xl bg-white p-2 shadow-lg"
               >
                 <Search className="ml-2 h-5 w-5 text-gray-400" />
                 <input
                   type="text"
                   placeholder="Cari handphone, laptop, motor..."
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
                   className="w-full bg-transparent px-1 py-2 text-sm text-gray-800 placeholder-gray-400 focus:outline-none"
                 />
                 <button
@@ -179,7 +183,7 @@ export default function Home() {
                   <div className="relative h-40 w-full overflow-hidden bg-gray-100">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
-                      src={product.image}
+                      src={product.images?.[0] || `https://placehold.co/400x300/E2E8F0/1E293B?text=${encodeURIComponent(product.category)}`}
                       alt={product.title}
                       className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
                     />
@@ -189,16 +193,17 @@ export default function Home() {
                   </div>
                   <div className="flex flex-1 flex-col p-3">
                     <h3 className="mb-2 line-clamp-2 text-sm font-medium text-gray-800">{product.title}</h3>
-                    <div className="mb-1 flex items-center gap-1 text-xs text-amber-500">
-                      <Star className="h-3.5 w-3.5 fill-amber-400" />
-                      <span className="font-medium">{product.rating}</span>
-                    </div>
-                    <p className="mt-auto text-loak-blue font-bold">{product.price}</p>
+                    <p className="mt-auto text-loak-blue font-bold">Rp {product.price.toLocaleString('id-ID')}</p>
                     <p className="text-xs text-gray-500">{product.location}</p>
                   </div>
                 </div>
               </Link>
             ))}
+            {products.length === 0 && (
+              <p className="col-span-full rounded-xl border border-dashed border-gray-300 p-8 text-center text-sm text-gray-500">
+                Belum ada iklan aktif. Coba lagi nanti atau mulai jualan sekarang.
+              </p>
+            )}
           </div>
         </section>
 
