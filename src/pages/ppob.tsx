@@ -26,6 +26,7 @@ export default function PpobPage() {
   const [buyerEmail, setBuyerEmail] = useState('');
   const [buyerPhone, setBuyerPhone] = useState('');
   const [search, setSearch] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [category, setCategory] = useState('');
   const [orders, setOrders] = useState<PpobOrder[]>([]);
   const [quote, setQuote] = useState<PpobOrder | null>(null);
@@ -41,10 +42,15 @@ export default function PpobPage() {
   }, [authLoading, user]);
 
   useEffect(() => {
+    const timeoutId = window.setTimeout(() => setDebouncedSearch(search), 300);
+    return () => window.clearTimeout(timeoutId);
+  }, [search]);
+
+  useEffect(() => {
     if (!authResolved) return;
     let active = true;
     setLoadingCatalog(true);
-    getPpobProducts(type, search, category)
+    getPpobProducts(type, debouncedSearch, category)
       .then((result) => {
         if (!active) return;
         setProducts(result.data);
@@ -53,7 +59,7 @@ export default function PpobPage() {
       .catch((catalogError) => active && setError((catalogError as Error).message))
       .finally(() => active && setLoadingCatalog(false));
     return () => { active = false; };
-  }, [authResolved, type, search, category]);
+  }, [authResolved, type, debouncedSearch, category]);
 
   useEffect(() => {
     if (!authResolved || guest) return;
@@ -126,9 +132,6 @@ export default function PpobPage() {
             <p className="mt-2 text-sm text-gray-500">Pulsa, paket data, listrik, air, telepon, BPJS, dan layanan PPOB lainnya.</p>
           </div>
           <div className="flex items-center gap-3">
-            <div className="rounded-xl bg-loak-light px-4 py-3 text-sm text-gray-600">
-              Pembayaran aman melalui <strong className="text-loak-blue">Mayar</strong>
-            </div>
             {guest ? <Link href="/login?next=/ppob" className="text-sm font-semibold text-loak-blue hover:underline">Masuk</Link> : <span className="text-sm font-medium text-gray-500">Login aktif</span>}
           </div>
         </div>

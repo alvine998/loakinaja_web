@@ -1,6 +1,10 @@
 const API_BASE_URL = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api').replace(/\/$/, '');
 const TOKEN_KEY = 'loakinaja_api_token';
 
+export function apiUrl(path: string): string {
+  return `${API_BASE_URL}${path}`;
+}
+
 export class ApiError extends Error {
   constructor(message: string, public readonly status: number) {
     super(message);
@@ -33,7 +37,7 @@ export async function apiRequest<T>(path: string, options: RequestInit = {}, gue
 
   let response: Response;
   try {
-    response = await fetch(`${API_BASE_URL}${path}`, { ...options, headers });
+    response = await fetch(apiUrl(path), { ...options, headers });
   } catch {
     throw new Error('Tidak dapat terhubung ke server. Periksa koneksi dan coba lagi.');
   }

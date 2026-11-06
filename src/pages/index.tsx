@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import SEO from '@/components/SEO';
 import Link from 'next/link';
-import { Smartphone, Monitor, Camera, Tv, Car, Home as HomeIcon, Search, ShieldCheck, BadgeCheck, Truck, ArrowRight, Sparkles } from 'lucide-react';
+import { Smartphone, Monitor, Camera, Tv, Car, Home as HomeIcon, Search, ShieldCheck, BadgeCheck, Truck, ArrowRight, Sparkles, Zap, Droplets, HeartPulse, Wifi, Receipt } from 'lucide-react';
 import { getListings, Listing } from '@/lib/db';
 
 export default function Home() {
@@ -31,6 +31,15 @@ export default function Home() {
     { value: '120rb+', label: 'Barang Terjual' },
     { value: '50rb+', label: 'Penjual Aktif' },
     { value: '4.8/5', label: 'Rating Amanah' },
+  ];
+
+  const billCategories = [
+    { name: 'Pulsa & Paket Data', icon: <Smartphone className="h-5 w-5" /> },
+    { name: 'Listrik', icon: <Zap className="h-5 w-5" /> },
+    { name: 'Air', icon: <Droplets className="h-5 w-5" /> },
+    { name: 'BPJS', icon: <HeartPulse className="h-5 w-5" /> },
+    { name: 'Internet', icon: <Wifi className="h-5 w-5" /> },
+    { name: 'Tagihan lain', icon: <Receipt className="h-5 w-5" /> },
   ];
 
   return (
@@ -158,6 +167,34 @@ export default function Home() {
                 </div>
               </Link>
             ))}
+          </div>
+        </section>
+
+        {/* Bill payment section */}
+        <section className="overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm">
+          <div className="grid gap-6 bg-gradient-to-r from-loak-light via-white to-white p-6 sm:p-8 lg:grid-cols-[minmax(0,1fr)_1.2fr] lg:items-center">
+            <div>
+              <span className="inline-flex items-center gap-2 rounded-full bg-white px-3 py-1 text-xs font-semibold text-loak-blue shadow-sm">
+                <Receipt className="h-4 w-4" /> Layanan digital
+              </span>
+              <h2 className="mt-3 text-2xl font-bold text-gray-900">Bayar Tagihan, Praktis di LoakinAja</h2>
+              <p className="mt-2 max-w-lg text-sm leading-relaxed text-gray-600">
+                Isi pulsa dan paket data, atau cek tagihan bulanan dalam satu tempat. Pembayaran mudah dan aman.
+              </p>
+              <Link href="/ppob" className="mt-5 inline-flex items-center gap-2 rounded-xl bg-loak-blue px-5 py-3 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-loak-blue-dark">
+                Bayar Sekarang <ArrowRight className="h-4 w-4" />
+              </Link>
+            </div>
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+              {billCategories.map((category) => (
+                <Link href="/ppob" key={category.name} className="group flex items-center gap-3 rounded-xl border border-gray-100 bg-white p-3 transition-all hover:-translate-y-0.5 hover:border-loak-blue/30 hover:shadow-md sm:p-4">
+                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-loak-light text-loak-blue transition-colors group-hover:bg-loak-blue group-hover:text-white">
+                    {category.icon}
+                  </span>
+                  <span className="text-xs font-semibold text-gray-700 sm:text-sm">{category.name}</span>
+                </Link>
+              ))}
+            </div>
           </div>
         </section>
 

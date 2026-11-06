@@ -35,7 +35,7 @@ interface AuthContextValue {
   }) => Promise<PublicUser>;
   login: (email: string, password: string) => Promise<PublicUser>;
   logout: () => Promise<void>;
-  refresh: () => Promise<void>;
+  refresh: () => Promise<PublicUser | null>;
 }
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
@@ -49,6 +49,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   const refresh = useCallback(async () => {
     const current = await getCurrentUser();
     setUser(current);
+    return current;
   }, []);
 
   useEffect(() => {
