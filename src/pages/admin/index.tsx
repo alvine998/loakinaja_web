@@ -47,6 +47,8 @@ type AdminAccount = { id: string; email: string; role: AdminRoleKey; createdAt: 
 type AdminData = { users: AdminUser[]; listings: AdminListing[]; orders: AdminOrder[] };
 type EscrowAccount = { id: string; bankName: string; accountNumber: string; accountHolder: string; isActive: boolean; createdAt: string };
 type EscrowAccountForm = Pick<EscrowAccount, 'bankName' | 'accountNumber' | 'accountHolder' | 'isActive'>;
+type AdminWithdrawal = { id: string; userId: string; amount: number; bankName: string; accountNumber: string; accountHolder: string; status: 'pending' | 'paid' | 'rejected'; createdAt: string; user?: { name: string; email: string } };
+type AdminEscrowSale = { id: string; amount: number; status: string; createdAt: string; escrowBankName: string; escrowAccountNumber: string; listing?: { title: string }; buyer?: { name: string }; seller?: { name: string } };
 type Section = 'overview' | 'users' | 'listings' | 'orders' | 'referrals' | 'escrow' | 'finance' | 'ppob' | 'admins' | 'profile' | 'categories';
 
 const SECTION_SLUGS: Record<Section, string> = {
@@ -265,6 +267,8 @@ export default function AdminDashboard() {
   const [categoryForm, setCategoryForm] = useState({ name: '', icon: 'Smartphone' });
   const [editingCategoryId, setEditingCategoryId] = useState<string | null>(null);
   const [savingCategory, setSavingCategory] = useState(false);
+  const [withdrawals, setWithdrawals] = useState<AdminWithdrawal[]>([]);
+  const [escrowSales, setEscrowSales] = useState<AdminEscrowSale[]>([]);
 
   const loadDashboard = useCallback(async () => {
     let session: { authenticated: boolean; admin: { id: string; email: string; role: string; permissions: string[] } };
@@ -300,6 +304,14 @@ export default function AdminDashboard() {
     setProfileForm((current) => ({ ...current, email: session.admin.email }));
     const categoryResponse = await fetch(apiUrl('/categories')).then((response) => response.json()).catch(() => ({ data: [] }));
     setCategories(categoryResponse.data || []);
+    if (session.admin.permissions.includes('finance:view')) {
+      const [withdrawalResponse, escrowSaleResponse] = await Promise.all([
+        adminRequest<{ data: AdminWithdrawal[] }>('/admin/withdrawals'),
+        adminRequest<{ data: AdminEscrowSale[] }>('/admin/escrow-sales'),
+      ]);
+      setWithdrawals(withdrawalResponse.data);
+      setEscrowSales(escrowSaleResponse.data);
+    }
     setLoading(false);
   }, [router]);
 
@@ -749,6 +761,34 @@ export default function AdminDashboard() {
     }
   };
 
+  const processWithdrawal = async (withdrawal: AdminWithdrawal, decision: 'paid' | 'rejected') => {
+    try {
+      const response = await adminRequest<{ data: AdminWithdrawal }>(`/admin/withdrawals/${encodeURIComponent(withdrawal.id)}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ decision }),
+      });
+      setWithdrawals((current) => current.map((item) => item.id === withdrawal.id ? response.data : item));
+      setNotice(decision === 'paid' ? 'Penarikan ditandai sudah dibayar.' : 'Penarikan ditolak dan saldo dikembalikan.');
+      setError('');
+    } catch (reason) {
+      setError((reason as Error).message);
+    }
+  };
+
+  const processEscrowSale = async (sale: AdminEscrowSale, decision: 'paid' | 'released' | 'return_to_escrow' | 'cancelled') => {
+    try {
+      const response = await adminRequest<{ data: AdminEscrowSale }>(`/admin/escrow-sales/${encodeURIComponent(sale.id)}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ decision }),
+      });
+      setEscrowSales((current) => current.map((item) => item.id === sale.id ? response.data : item));
+      setNotice(decision === 'paid' ? 'Pembayaran escrow diverifikasi.' : 'Dana dilepas ke saldo penjual.');
+      setError('');
+    } catch (reason) {
+      setError((reason as Error).message);
+    }
+  };
+
   const heading = NAV_ITEMS.find((item) => item.id === section)?.label || 'Overview';
   const visibleNavItems = NAV_ITEMS.filter((item) => !SECTION_PERMISSIONS[item.id] || permissions.includes(SECTION_PERMISSIONS[item.id]!));
 
@@ -838,6 +878,10 @@ export default function AdminDashboard() {
                   </section>
                 </div>
                 <section className="mt-5 overflow-hidden rounded-2xl border border-slate-200 bg-white"><div className="flex items-center justify-between border-b border-slate-100 px-5 py-4"><div><h3 className="text-sm font-bold">Aktivitas pembayaran terbaru</h3><p className="mt-0.5 text-xs text-slate-400">Transaksi token terbaru</p></div><span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-500">{data.orders.length} transaksi</span></div><div className="overflow-x-auto"><table className="w-full min-w-[760px] text-left text-xs"><thead className="bg-slate-50 text-slate-400"><tr>{['PESANAN', 'PEMBELI', 'PAKET', 'METODE', 'TANGGAL', 'STATUS', 'NOMINAL'].map((cell) => <th key={cell} className="whitespace-nowrap px-5 py-3 font-semibold">{cell}</th>)}</tr></thead><tbody className="divide-y divide-slate-100">{[...data.orders].sort((a, b) => b.createdAt.localeCompare(a.createdAt)).slice(0, 8).map((order) => <tr key={order.id}><td className="px-5 py-3.5 font-semibold text-slate-700">#{order.id.slice(-8)}</td><td className="px-5 py-3.5 text-slate-500">{data.users.find((user) => user.id === order.userId)?.name || '—'}</td><td className="px-5 py-3.5 text-slate-500">{order.packageLabel}</td><td className="px-5 py-3.5 text-slate-500">{order.method?.replaceAll('-', ' ').toUpperCase() || '—'}</td><td className="px-5 py-3.5 text-slate-500">{formatDate(order.paidAt || order.createdAt)}</td><td className="px-5 py-3.5"><StatusPill status={order.status} /></td><td className="px-5 py-3.5 text-right font-semibold text-slate-700">{rupiah(order.amount)}</td></tr>)}</tbody></table>{data.orders.length === 0 && <p className="px-5 py-10 text-center text-sm text-slate-400">Belum ada data transaksi keuangan.</p>}</div></section>
+                <div className="mt-5 grid gap-5 xl:grid-cols-2">
+                  <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white"><div className="border-b border-slate-100 px-5 py-4"><h3 className="text-sm font-bold">Verifikasi Rekening Bersama</h3><p className="mt-0.5 text-xs text-slate-400">Konfirmasi transfer dan pelepasan saldo penjual.</p></div>{escrowSales.length ? <ul className="divide-y divide-slate-100">{escrowSales.map((sale) => <li key={sale.id} className="p-4"><div className="flex flex-wrap items-start justify-between gap-3"><div><p className="text-sm font-semibold text-slate-700">{sale.listing?.title || 'Listing'} · {rupiah(sale.amount)}</p><p className="mt-1 text-xs text-slate-400">Pembeli {sale.buyer?.name || '—'} · Penjual {sale.seller?.name || '—'}</p><p className="mt-1 text-xs font-semibold text-amber-700">{sale.status.replaceAll('_', ' ')}</p></div><div className="flex gap-2">{sale.status === 'payment_submitted' && <><button type="button" onClick={() => processEscrowSale(sale, 'paid')} className="rounded-lg bg-blue-700 px-3 py-2 text-xs font-semibold text-white hover:bg-blue-800">Verifikasi transfer</button><button type="button" onClick={() => processEscrowSale(sale, 'cancelled')} className="rounded-lg border border-red-200 px-3 py-2 text-xs font-semibold text-red-700 hover:bg-red-50">Tolak</button></>}{sale.status === 'awaiting_payment' && <button type="button" onClick={() => processEscrowSale(sale, 'cancelled')} className="rounded-lg border border-red-200 px-3 py-2 text-xs font-semibold text-red-700 hover:bg-red-50">Batalkan</button>}{sale.status === 'release_requested' && <><button type="button" onClick={() => processEscrowSale(sale, 'released')} className="rounded-lg bg-emerald-600 px-3 py-2 text-xs font-semibold text-white hover:bg-emerald-700">Lepas dana</button><button type="button" onClick={() => processEscrowSale(sale, 'return_to_escrow')} className="rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-50">Sengketa</button></>}</div></div></li>)}</ul> : <p className="px-5 py-10 text-center text-sm text-slate-400">Belum ada transaksi Rekening Bersama.</p>}</section>
+                  <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white"><div className="border-b border-slate-100 px-5 py-4"><h3 className="text-sm font-bold">Permintaan penarikan</h3><p className="mt-0.5 text-xs text-slate-400">Transfer manual ke rekening tujuan seller.</p></div>{withdrawals.length ? <ul className="divide-y divide-slate-100">{withdrawals.map((withdrawal) => <li key={withdrawal.id} className="p-4"><div className="flex flex-wrap items-start justify-between gap-3"><div><p className="text-sm font-semibold text-slate-700">{rupiah(withdrawal.amount)} · {withdrawal.user?.name || 'Seller'}</p><p className="mt-1 text-xs text-slate-500">{withdrawal.bankName} · {withdrawal.accountNumber} · {withdrawal.accountHolder}</p><p className="mt-1 text-xs font-semibold text-amber-700">{withdrawal.status === 'pending' ? 'Menunggu diproses' : withdrawal.status === 'paid' ? 'Sudah dibayar' : 'Ditolak'}</p></div>{withdrawal.status === 'pending' && <div className="flex gap-2"><button type="button" onClick={() => processWithdrawal(withdrawal, 'paid')} className="rounded-lg bg-emerald-600 px-3 py-2 text-xs font-semibold text-white hover:bg-emerald-700">Sudah transfer</button><button type="button" onClick={() => processWithdrawal(withdrawal, 'rejected')} className="rounded-lg border border-red-200 px-3 py-2 text-xs font-semibold text-red-700 hover:bg-red-50">Tolak</button></div>}</div></li>)}</ul> : <p className="px-5 py-10 text-center text-sm text-slate-400">Belum ada permintaan penarikan.</p>}</section>
+                </div>
               </> : section === 'categories' ? <>
                 <div className="mb-6"><h2 className="text-xl font-bold tracking-tight">Kategori produk</h2><p className="mt-1 text-sm text-slate-500">Kelola kategori yang tersedia saat pengguna memasang iklan beserta ikon yang tampil di halaman utama.</p></div>
                 <div className="grid items-start gap-5 xl:grid-cols-[minmax(300px,0.8fr)_minmax(0,1.2fr)]">

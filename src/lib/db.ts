@@ -56,10 +56,11 @@ export interface ListingInput {
 export interface EscrowSale {
   id: string;
   listingId: string;
+  listingTitle: string;
   buyerId: string;
   sellerId: string;
   amount: number;
-  status: 'awaiting_payment' | 'payment_submitted' | 'in_escrow' | 'released' | 'cancelled';
+  status: 'awaiting_payment' | 'payment_submitted' | 'in_escrow' | 'release_requested' | 'released' | 'cancelled';
   escrowBankName: string;
   escrowAccountNumber: string;
   escrowAccountHolder: string;
@@ -591,6 +592,11 @@ export async function confirmEscrowDelivery(saleId: string): Promise<EscrowSale>
 
 export async function submitEscrowPayment(saleId: string): Promise<EscrowSale> {
   const result = await apiRequest<{ data: EscrowSale }>(`/escrow-sales/${encodeURIComponent(saleId)}/submit-payment`, { method: 'POST' });
+  return result.data;
+}
+
+export async function requestEscrowRelease(saleId: string): Promise<EscrowSale> {
+  const result = await apiRequest<{ data: EscrowSale }>(`/escrow-sales/${encodeURIComponent(saleId)}/confirm-delivery`, { method: 'POST', body: JSON.stringify({ decision: 'confirm' }) });
   return result.data;
 }
 

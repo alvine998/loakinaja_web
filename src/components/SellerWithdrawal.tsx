@@ -1,12 +1,15 @@
 import React, { FormEvent, useCallback, useEffect, useState } from 'react';
 import { ArrowDownToLine, Clock3, Wallet } from 'lucide-react';
-import { getSellerBalance, requestSellerWithdrawal, Withdrawal } from '@/lib/db';
+import { EscrowSale, getMyEscrowSales, getSellerBalance, requestSellerWithdrawal, Withdrawal } from '@/lib/db';
 import { formatRupiah } from '@/lib/format';
+import { useAuth } from '@/context/AuthContext';
 
 export default function SellerWithdrawal() {
+  const { user } = useAuth();
   const [balance, setBalance] = useState(0);
   const [minimumAmount, setMinimumAmount] = useState(10000);
   const [withdrawals, setWithdrawals] = useState<Withdrawal[]>([]);
+  const [sales, setSales] = useState<EscrowSale[]>([]);
   const [amount, setAmount] = useState('');
   const [bankName, setBankName] = useState('');
   const [accountNumber, setAccountNumber] = useState('');
@@ -18,16 +21,17 @@ export default function SellerWithdrawal() {
 
   const reload = useCallback(async () => {
     try {
-      const result = await getSellerBalance();
+      const [result, escrowSales] = await Promise.all([getSellerBalance(), getMyEscrowSales()]);
       setBalance(result.availableAmount);
       setMinimumAmount(result.minimumAmount);
       setWithdrawals(result.data);
+      setSales(escrowSales.filter((sale) => sale.sellerId === user?.id));
     } catch (reason) {
       setError((reason as Error).message);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [user?.id]);
 
   useEffect(() => { void reload(); }, [reload]);
 
@@ -67,6 +71,7 @@ export default function SellerWithdrawal() {
         <button type="submit" disabled={submitting || loading || Number(amount.replace(/\D/g, '')) < minimumAmount || Number(amount.replace(/\D/g, '')) > balance} className="inline-flex items-center justify-center gap-2 rounded-lg bg-loak-blue px-4 py-3 text-sm font-bold text-white hover:bg-loak-blue-dark disabled:cursor-not-allowed disabled:opacity-50 sm:col-span-2"><ArrowDownToLine className="h-4 w-4" />{submitting ? 'Mengirim...' : 'Tarik Dana'}</button>
       </form>
       <div className="mt-6 border-t border-gray-100 pt-5"><h3 className="flex items-center gap-2 text-sm font-bold text-gray-800"><Clock3 className="h-4 w-4 text-gray-400" />Riwayat penarikan</h3>{loading ? <p className="mt-3 text-xs text-gray-400">Memuat...</p> : withdrawals.length ? <ul className="mt-2 divide-y divide-gray-100">{withdrawals.map((withdrawal) => <li key={withdrawal.id} className="flex flex-wrap items-center justify-between gap-2 py-3 text-xs"><span><span className="font-semibold text-gray-700">{formatRupiah(withdrawal.amount)}</span><span className="ml-2 text-gray-400">{withdrawal.bankName} · {withdrawal.accountNumber}</span></span><span className={`rounded-full px-2.5 py-1 font-semibold ${withdrawal.status === 'paid' ? 'bg-green-50 text-green-700' : withdrawal.status === 'rejected' ? 'bg-red-50 text-red-700' : 'bg-amber-50 text-amber-700'}`}>{statusLabel[withdrawal.status]}</span></li>)}</ul> : <p className="mt-3 text-xs text-gray-400">Belum ada permintaan penarikan.</p>}</div>
+      <div className="mt-6 border-t border-gray-100 pt-5"><h3 className="text-sm font-bold text-gray-800">Transaksi Rekening Bersama</h3>{loading ? <p className="mt-3 text-xs text-gray-400">Memuat...</p> : sales.length ? <ul className="mt-2 divide-y divide-gray-100">{sales.map((sale) => <li key={sale.id} className="flex flex-wrap items-center justify-between gap-2 py-3 text-xs"><span><span className="font-semibold text-gray-700">{sale.listingTitle}</span><span className="ml-2 text-gray-400">{formatRupiah(sale.amount)}</span></span><span className={`rounded-full px-2.5 py-1 font-semibold ${sale.status === 'released' ? 'bg-green-50 text-green-700' : sale.status === 'in_escrow' || sale.status === 'release_requested' ? 'bg-blue-50 text-blue-700' : 'bg-amber-50 text-amber-700'}`}>{sale.status.replaceAll('_', ' ')}</span></li>)}</ul> : <p className="mt-3 text-xs text-gray-400">Belum ada penjualan melalui Rekening Bersama.</p>}</div>
     </section>
   );
 }

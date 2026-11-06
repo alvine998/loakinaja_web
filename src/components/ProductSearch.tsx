@@ -6,11 +6,15 @@ import { getListings, Listing } from '@/lib/db';
 export default function ProductSearch({ isPpob = false }: { isPpob?: boolean }) {
   const router = useRouter();
   const containerRef = useRef<HTMLFormElement>(null);
-  const [query, setQuery] = useState('');
+  const [query, setQuery] = useState(() => typeof router.query.q === 'string' ? router.query.q : '');
   const [suggestions, setSuggestions] = useState<Listing[]>([]);
   const [loading, setLoading] = useState(false);
   const [open, setOpen] = useState(false);
   const [activeIndex, setActiveIndex] = useState(-1);
+
+  useEffect(() => {
+    setQuery(typeof router.query.q === 'string' ? router.query.q : '');
+  }, [router.query.q]);
 
   useEffect(() => {
     if (isPpob || query.trim().length < 2) {
