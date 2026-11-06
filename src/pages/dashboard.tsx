@@ -20,8 +20,10 @@ import {
   X,
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
+import { formatThousandsInput, parseThousandsInput } from '@/lib/format';
+import LocationSelector from '@/components/LocationSelector';
+import { getCategories, type Category } from '@/lib/categories';
 import {
-  CATEGORIES,
   CONDITIONS,
   Listing,
   ListingStatus,
@@ -43,7 +45,7 @@ const FILTERS: { id: Filter; label: string }[] = [
 
 const EMPTY_EDIT_FORM = {
   title: '',
-  category: CATEGORIES[0],
+  category: '',
   condition: CONDITIONS[0],
   price: '',
   location: '',
@@ -89,6 +91,7 @@ export default function DashboardPenjual() {
   const { user, loading } = useAuth();
 
   const [listings, setListings] = useState<Listing[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [fetching, setFetching] = useState(true);
   const [filter, setFilter] = useState<Filter>('all');
   const [error, setError] = useState('');
@@ -115,6 +118,10 @@ export default function DashboardPenjual() {
     setFetching(true);
     loadListings().finally(() => setFetching(false));
   }, [user, loadListings]);
+
+  useEffect(() => {
+    getCategories().then(setCategories);
+  }, []);
 
   useEffect(() => {
     if (!editing) return;
@@ -156,7 +163,7 @@ export default function DashboardPenjual() {
       title: listing.title,
       category: listing.category,
       condition: listing.condition,
-      price: String(listing.price),
+      price: listing.price.toLocaleString('id-ID'),
       location: listing.location,
       description: listing.description,
     });
@@ -178,7 +185,7 @@ export default function DashboardPenjual() {
       await updateListing(editing.id, {
         title: editForm.title,
         category: editForm.category,
-        price: Number(editForm.price),
+        price: parseThousandsInput(editForm.price),
         condition: editForm.condition,
         description: editForm.description,
         location: editForm.location,
@@ -532,8 +539,8 @@ export default function DashboardPenjual() {
                       }
                       className="mt-1 block w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-loak-blue focus:border-loak-blue sm:text-sm bg-white"
                     >
-                      {CATEGORIES.map((c) => (
-                        <option key={c} value={c}>{c}</option>
+                      {categories.map((category) => (
+                        <option key={category.id} value={category.name}>{category.name}</option>
                       ))}
                     </select>
                   </div>
@@ -561,27 +568,17 @@ export default function DashboardPenjual() {
                       Harga (Rp)
                     </label>
                     <input
-                      type="number"
-                      min="0"
+                      type="text"
+                      inputMode="numeric"
                       value={editForm.price}
                       onChange={(e) =>
-                        setEditForm((f) => ({ ...f, price: e.target.value }))
+                        setEditForm((f) => ({ ...f, price: formatThousandsInput(e.target.value) }))
                       }
                       className="mt-1 block w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm placeholder-gray-400 focus:outline-none focus:ring-loak-blue focus:border-loak-blue sm:text-sm"
                     />
                   </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700">
-                      Lokasi
-                    </label>
-                    <input
-                      type="text"
-                      value={editForm.location}
-                      onChange={(e) =>
-                        setEditForm((f) => ({ ...f, location: e.target.value }))
-                      }
-                      className="mt-1 block w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm placeholder-gray-400 focus:outline-none focus:ring-loak-blue focus:border-loak-blue sm:text-sm"
-                    />
+                  <div className="sm:col-span-2">
+                    <LocationSelector value={editForm.location} onChange={(location) => setEditForm((f) => ({ ...f, location }))} />
                   </div>
                 </div>
 

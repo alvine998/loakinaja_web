@@ -1,25 +1,19 @@
 import React, { useEffect, useState } from 'react';
 import SEO from '@/components/SEO';
 import Link from 'next/link';
-import { Smartphone, Monitor, Camera, Tv, Car, Home as HomeIcon, Search, ShieldCheck, BadgeCheck, Truck, ArrowRight, Sparkles, Zap, Droplets, HeartPulse, Wifi, Receipt } from 'lucide-react';
+import { Smartphone, Search, ShieldCheck, BadgeCheck, Truck, ArrowRight, Sparkles, Zap, Droplets, HeartPulse, Wifi, Receipt } from 'lucide-react';
 import { getListings, Listing } from '@/lib/db';
+import { CATEGORY_ICONS, DEFAULT_CATEGORIES, getCategories, type Category } from '@/lib/categories';
 
 export default function Home() {
   const [products, setProducts] = useState<Listing[]>([]);
   const [search, setSearch] = useState('');
+  const [categories, setCategories] = useState<Category[]>(DEFAULT_CATEGORIES);
 
   useEffect(() => {
     getListings({ limit: 6 }).then(setProducts).catch(() => setProducts([]));
+    getCategories().then(setCategories);
   }, []);
-
-  const categories = [
-    { name: 'Handphone', icon: <Smartphone className="w-6 h-6 text-loak-blue" />, slug: 'handphone' },
-    { name: 'Komputer', icon: <Monitor className="w-6 h-6 text-loak-blue" />, slug: 'komputer' },
-    { name: 'Elektronik', icon: <Tv className="w-6 h-6 text-loak-blue" />, slug: 'elektronik' },
-    { name: 'Kamera', icon: <Camera className="w-6 h-6 text-loak-blue" />, slug: 'kamera' },
-    { name: 'Otomotif', icon: <Car className="w-6 h-6 text-loak-blue" />, slug: 'otomotif' },
-    { name: 'Properti', icon: <HomeIcon className="w-6 h-6 text-loak-blue" />, slug: 'properti' },
-  ];
 
   const features = [
     { icon: <ShieldCheck className="w-6 h-6 text-loak-blue" />, title: 'Rekening Bersama', desc: 'Uang baru cair setelah barang sampai & kamu konfirmasi.' },
@@ -158,10 +152,10 @@ export default function Home() {
           </div>
           <div className="grid grid-cols-3 gap-3 sm:gap-4 md:grid-cols-6">
             {categories.map((category) => (
-              <Link href={`/category/${category.slug}`} key={category.slug} className="group">
+              <Link href={`/category/${category.slug}`} key={category.id} className="group">
                 <div className="flex flex-col items-center justify-center gap-2 sm:gap-3 rounded-2xl border border-gray-100 bg-white p-4 shadow-sm transition-all hover:-translate-y-1 hover:border-loak-blue/30 hover:shadow-lg sm:p-5">
                   <div className="flex h-12 w-12 items-center justify-center rounded-full bg-loak-light transition-transform group-hover:scale-110 sm:h-14 sm:w-14">
-                    {category.icon}
+                    {(() => { const Icon = CATEGORY_ICONS[category.icon] || Smartphone; return <Icon className="h-6 w-6 text-loak-blue" />; })()}
                   </div>
                   <span className="text-center text-[13px] font-medium text-gray-700 sm:text-sm">{category.name}</span>
                 </div>

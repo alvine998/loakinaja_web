@@ -4,6 +4,7 @@ import { useRouter } from 'next/router';
 import Link from 'next/link';
 import { Filter, ChevronDown } from 'lucide-react';
 import { getListings, Listing } from '@/lib/db';
+import { getCategories } from '@/lib/categories';
 
 interface FilterSectionProps {
   title: string;
@@ -41,16 +42,22 @@ export default function CategoryPage() {
   const [products, setProducts] = useState<Listing[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState('');
+  const [resolvedCategoryName, setResolvedCategoryName] = useState('');
 
   useEffect(() => {
     if (!router.isReady) return;
-    const name = typeof slug === 'string' ? slug.replace(/-/g, ' ') : '';
-    const category = name && name.toLowerCase() !== 'semua'
-      ? name.replace(/\b\w/g, (letter) => letter.toUpperCase())
-      : undefined;
     const q = typeof router.query.q === 'string' ? router.query.q : undefined;
     setLoading(true);
-    getListings({ category, q, limit: 50 })
+    getCategories()
+      .then(async (categories) => {
+        const matched = categories.find((category) => category.slug === slug);
+        const name = typeof slug === 'string' ? slug.replace(/-/g, ' ') : '';
+        const category = matched?.name || (name && name.toLowerCase() !== 'semua'
+          ? name.replace(/\b\w/g, (letter) => letter.toUpperCase())
+          : undefined);
+        setResolvedCategoryName(matched?.name || category || 'Semua');
+        return getListings({ category, q, limit: 50 });
+      })
       .then(setProducts)
       .catch((error: Error) => setLoadError(error.message))
       .finally(() => setLoading(false));
@@ -123,14 +130,14 @@ export default function CategoryPage() {
   return (
     <>
       <Head>
-        <title>{categoryName} - LoakinAja</title>
+        <title>{resolvedCategoryName || categoryName} - LoakinAja</title>
       </Head>
 
       {/* Breadcrumb */}
       <div className="text-sm text-gray-500 mb-6 flex items-center">
         <Link href="/" className="hover:text-loak-blue">Beranda</Link>
         <span className="mx-2">{'>'}</span>
-        <span className="text-gray-900 font-medium">{categoryName}</span>
+        <span className="text-gray-900 font-medium">{resolvedCategoryName || categoryName}</span>
       </div>
 
       <div className="flex flex-col md:flex-row gap-6">
@@ -145,7 +152,7 @@ export default function CategoryPage() {
         <main className="flex-grow">
           <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-4 gap-3">
             <h1 className="text-lg sm:text-xl md:text-2xl font-bold text-gray-900">
-              Menampilkan produk untuk "{categoryName}"
+              Menampilkan produk untuk "{resolvedCategoryName || categoryName}"
             </h1>
             <div className="flex items-center gap-2 shrink-0">
               {/* Mobile filter toggle */}

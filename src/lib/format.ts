@@ -1,6 +1,14 @@
 export const formatRupiah = (value: number) =>
   `Rp ${value.toLocaleString('id-ID')}`;
 
+export const formatThousandsInput = (value: string) => {
+  const digits = value.replace(/\D/g, '').replace(/^0+(?=\d)/, '');
+  return digits.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+};
+
+export const parseThousandsInput = (value: string) =>
+  Number(value.replace(/\D/g, ''));
+
 export const formatCountdown = (ms: number) => {
   const totalSeconds = Math.max(0, Math.ceil(ms / 1000));
   const minutes = Math.floor(totalSeconds / 60);

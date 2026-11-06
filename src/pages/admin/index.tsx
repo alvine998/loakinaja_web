@@ -2,6 +2,9 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
 import { adminRequest, clearAdminToken, saveAdminToken } from '@/lib/adminApi';
+import { apiUrl } from '@/lib/api';
+import { formatThousandsInput, parseThousandsInput } from '@/lib/format';
+import { CATEGORY_ICONS, type Category } from '@/lib/categories';
 import {
   Activity,
   ArrowUpRight,
@@ -14,6 +17,7 @@ import {
   CircleDollarSign,
   Clock3,
   Coins,
+  Layers3,
   CreditCard,
   Eye,
   GitBranch,
@@ -43,7 +47,7 @@ type AdminAccount = { id: string; email: string; role: AdminRoleKey; createdAt: 
 type AdminData = { users: AdminUser[]; listings: AdminListing[]; orders: AdminOrder[] };
 type EscrowAccount = { id: string; bankName: string; accountNumber: string; accountHolder: string; isActive: boolean; createdAt: string };
 type EscrowAccountForm = Pick<EscrowAccount, 'bankName' | 'accountNumber' | 'accountHolder' | 'isActive'>;
-type Section = 'overview' | 'users' | 'listings' | 'orders' | 'referrals' | 'escrow' | 'finance' | 'ppob' | 'admins' | 'profile';
+type Section = 'overview' | 'users' | 'listings' | 'orders' | 'referrals' | 'escrow' | 'finance' | 'ppob' | 'admins' | 'profile' | 'categories';
 
 const SECTION_SLUGS: Record<Section, string> = {
   overview: 'overview',
@@ -56,6 +60,7 @@ const SECTION_SLUGS: Record<Section, string> = {
   ppob: 'harga-ppob',
   admins: 'administrators',
   profile: 'profile',
+  categories: 'categories',
 };
 const SECTION_BY_SLUG = Object.fromEntries(
   Object.entries(SECTION_SLUGS).map(([section, slug]) => [slug, section as Section])
@@ -70,6 +75,7 @@ const SECTION_PERMISSIONS: Partial<Record<Section, string>> = {
   escrow: 'escrow:manage',
   admins: 'admins:manage',
   profile: 'profile:manage',
+  categories: 'categories:manage',
 };
 
 const NAV_ITEMS: { id: Section; label: string; icon: typeof LayoutDashboard }[] = [
@@ -82,6 +88,7 @@ const NAV_ITEMS: { id: Section; label: string; icon: typeof LayoutDashboard }[] 
   { id: 'ppob', label: 'Harga PPOB', icon: Coins },
   { id: 'escrow', label: 'Rekening Bersama', icon: CreditCard },
   { id: 'admins', label: 'Admin', icon: UserCog },
+  { id: 'categories', label: 'Kategori produk', icon: Layers3 },
   { id: 'profile', label: 'Pengaturan profil', icon: Settings },
 ];
 
@@ -237,7 +244,7 @@ export default function AdminDashboard() {
   const [editingEscrowId, setEditingEscrowId] = useState<string | null>(null);
   const [savingEscrow, setSavingEscrow] = useState(false);
   const [ppobMarkup, setPpobMarkup] = useState(1000);
-  const [ppobMarkupForm, setPpobMarkupForm] = useState('1000');
+  const [ppobMarkupForm, setPpobMarkupForm] = useState('1.000');
   const [savingPpobMarkup, setSavingPpobMarkup] = useState(false);
   const [selectedListingIds, setSelectedListingIds] = useState<Set<string>>(new Set());
   const [bulkReviewing, setBulkReviewing] = useState(false);
@@ -254,6 +261,10 @@ export default function AdminDashboard() {
   const [roleForm, setRoleForm] = useState({ key: '', label: '', permissions: [] as string[] });
   const [editingRoleKey, setEditingRoleKey] = useState<string | null>(null);
   const [adminManagementTab, setAdminManagementTab] = useState<'admins' | 'roles'>('admins');
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [categoryForm, setCategoryForm] = useState({ name: '', icon: 'Smartphone' });
+  const [editingCategoryId, setEditingCategoryId] = useState<string | null>(null);
+  const [savingCategory, setSavingCategory] = useState(false);
 
   const loadDashboard = useCallback(async () => {
     let session: { authenticated: boolean; admin: { id: string; email: string; role: string; permissions: string[] } };
@@ -285,8 +296,10 @@ export default function AdminDashboard() {
     setAvailableRoles(adminsResponse.roles);
     setAvailablePermissions(adminsResponse.permissions);
     setPpobMarkup(ppobSettingsResponse.data.markupRupiah);
-    setPpobMarkupForm(String(ppobSettingsResponse.data.markupRupiah));
+    setPpobMarkupForm(formatThousandsInput(String(ppobSettingsResponse.data.markupRupiah)));
     setProfileForm((current) => ({ ...current, email: session.admin.email }));
+    const categoryResponse = await fetch(apiUrl('/categories')).then((response) => response.json()).catch(() => ({ data: [] }));
+    setCategories(categoryResponse.data || []);
     setLoading(false);
   }, [router]);
 
@@ -688,15 +701,51 @@ export default function AdminDashboard() {
     try {
       const response = await adminRequest<{ data: { markupRupiah: number } }>('/admin/ppob-settings', {
         method: 'PATCH',
-        body: JSON.stringify({ markupRupiah: Number(ppobMarkupForm) }),
+        body: JSON.stringify({ markupRupiah: parseThousandsInput(ppobMarkupForm) }),
       });
       setPpobMarkup(response.data.markupRupiah);
-      setPpobMarkupForm(String(response.data.markupRupiah));
+      setPpobMarkupForm(formatThousandsInput(String(response.data.markupRupiah)));
       setNotice('Markup harga PPOB berhasil disimpan.');
     } catch (err) {
       setError((err as Error).message);
     } finally {
       setSavingPpobMarkup(false);
+    }
+  };
+
+  const saveCategory = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setSavingCategory(true);
+    setError('');
+    setNotice('');
+    try {
+      const response = await adminRequest<{ data: Category }>(editingCategoryId ? `/categories/${encodeURIComponent(editingCategoryId)}` : '/categories', {
+        method: editingCategoryId ? 'PATCH' : 'POST',
+        body: JSON.stringify(categoryForm),
+      });
+      setCategories((current) => editingCategoryId
+        ? current.map((category) => category.id === response.data.id ? response.data : category).sort((a, b) => a.name.localeCompare(b.name))
+        : [...current, response.data].sort((a, b) => a.name.localeCompare(b.name)));
+      setCategoryForm({ name: '', icon: 'Smartphone' });
+      setEditingCategoryId(null);
+      setNotice(editingCategoryId ? 'Kategori berhasil diperbarui.' : 'Kategori berhasil ditambahkan.');
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setSavingCategory(false);
+    }
+  };
+
+  const deleteCategory = async (category: Category) => {
+    if (!window.confirm(`Hapus kategori "${category.name}"?`)) return;
+    setError('');
+    setNotice('');
+    try {
+      await adminRequest<void>(`/categories/${encodeURIComponent(category.id)}`, { method: 'DELETE' });
+      setCategories((current) => current.filter((item) => item.id !== category.id));
+      setNotice('Kategori berhasil dihapus.');
+    } catch (err) {
+      setError((err as Error).message);
     }
   };
 
@@ -765,7 +814,7 @@ export default function AdminDashboard() {
                 <div className="mb-6"><h2 className="text-xl font-bold tracking-tight">Markup harga PPOB</h2><p className="mt-1 text-sm text-slate-500">Atur tambahan harga yang diterapkan pada produk Digiflazz untuk pelanggan.</p></div>
                 <form onSubmit={savePpobMarkup} className="max-w-2xl rounded-2xl border border-slate-200 bg-white p-5 sm:p-7">
                   <div className="mb-6 flex items-center gap-3"><span className="flex h-11 w-11 items-center justify-center rounded-xl bg-amber-50 text-amber-700"><Coins className="h-5 w-5" /></span><div><h3 className="text-sm font-bold">Markup tetap per transaksi</h3><p className="mt-0.5 text-xs text-slate-400">Nilai ini ditambahkan ke harga Digiflazz dan biaya admin provider, jika ada.</p></div></div>
-                  <label className="block text-xs font-semibold text-slate-600">Markup (Rupiah)<input type="number" min="0" max="10000000" step="1" required value={ppobMarkupForm} onChange={(event) => setPpobMarkupForm(event.target.value)} className="mt-1.5 w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm font-normal outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-50" /></label>
+                  <label className="block text-xs font-semibold text-slate-600">Markup (Rupiah)<input type="text" inputMode="numeric" required value={ppobMarkupForm} onChange={(event) => { const formatted = formatThousandsInput(event.target.value); if (parseThousandsInput(formatted) <= 10000000) setPpobMarkupForm(formatted); }} className="mt-1.5 w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm font-normal outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-50" /></label>
                   <p className="mt-2 text-xs text-slate-400">Markup saat ini: <span className="font-semibold text-slate-600">{rupiah(ppobMarkup)}</span>. Perubahan berlaku pada katalog dan quote baru.</p>
                   <button type="submit" disabled={savingPpobMarkup || ppobMarkupForm === ''} className="mt-5 inline-flex min-h-10 items-center justify-center gap-2 rounded-xl bg-blue-700 px-4 py-2 text-sm font-semibold text-white transition hover:bg-blue-800 disabled:opacity-60"><Check className="h-4 w-4" />{savingPpobMarkup ? 'Menyimpan...' : 'Simpan markup'}</button>
                 </form>
@@ -789,6 +838,19 @@ export default function AdminDashboard() {
                   </section>
                 </div>
                 <section className="mt-5 overflow-hidden rounded-2xl border border-slate-200 bg-white"><div className="flex items-center justify-between border-b border-slate-100 px-5 py-4"><div><h3 className="text-sm font-bold">Aktivitas pembayaran terbaru</h3><p className="mt-0.5 text-xs text-slate-400">Transaksi token terbaru</p></div><span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-500">{data.orders.length} transaksi</span></div><div className="overflow-x-auto"><table className="w-full min-w-[760px] text-left text-xs"><thead className="bg-slate-50 text-slate-400"><tr>{['PESANAN', 'PEMBELI', 'PAKET', 'METODE', 'TANGGAL', 'STATUS', 'NOMINAL'].map((cell) => <th key={cell} className="whitespace-nowrap px-5 py-3 font-semibold">{cell}</th>)}</tr></thead><tbody className="divide-y divide-slate-100">{[...data.orders].sort((a, b) => b.createdAt.localeCompare(a.createdAt)).slice(0, 8).map((order) => <tr key={order.id}><td className="px-5 py-3.5 font-semibold text-slate-700">#{order.id.slice(-8)}</td><td className="px-5 py-3.5 text-slate-500">{data.users.find((user) => user.id === order.userId)?.name || '—'}</td><td className="px-5 py-3.5 text-slate-500">{order.packageLabel}</td><td className="px-5 py-3.5 text-slate-500">{order.method?.replaceAll('-', ' ').toUpperCase() || '—'}</td><td className="px-5 py-3.5 text-slate-500">{formatDate(order.paidAt || order.createdAt)}</td><td className="px-5 py-3.5"><StatusPill status={order.status} /></td><td className="px-5 py-3.5 text-right font-semibold text-slate-700">{rupiah(order.amount)}</td></tr>)}</tbody></table>{data.orders.length === 0 && <p className="px-5 py-10 text-center text-sm text-slate-400">Belum ada data transaksi keuangan.</p>}</div></section>
+              </> : section === 'categories' ? <>
+                <div className="mb-6"><h2 className="text-xl font-bold tracking-tight">Kategori produk</h2><p className="mt-1 text-sm text-slate-500">Kelola kategori yang tersedia saat pengguna memasang iklan beserta ikon yang tampil di halaman utama.</p></div>
+                <div className="grid items-start gap-5 xl:grid-cols-[minmax(300px,0.8fr)_minmax(0,1.2fr)]">
+                  <form onSubmit={saveCategory} className="rounded-2xl border border-slate-200 bg-white p-5 sm:p-6">
+                    <div className="mb-5"><h3 className="text-sm font-bold">{editingCategoryId ? 'Ubah kategori' : 'Tambah kategori'}</h3><p className="mt-1 text-xs text-slate-400">Pilih nama dan ikon untuk kategori produk.</p></div>
+                    <div className="space-y-4">
+                      <label className="block text-xs font-semibold text-slate-600">Nama kategori<input required maxLength={80} value={categoryForm.name} onChange={(event) => setCategoryForm((current) => ({ ...current, name: event.target.value }))} placeholder="Contoh: Peralatan olahraga" className="mt-1.5 w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm font-normal outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-50" /></label>
+                      <fieldset><legend className="text-xs font-semibold text-slate-600">Pilih ikon</legend><div className="mt-2 grid grid-cols-4 gap-2 sm:grid-cols-5">{Object.entries(CATEGORY_ICONS).filter(([name]) => name !== 'Home').map(([name, Icon]) => <button type="button" key={name} onClick={() => setCategoryForm((current) => ({ ...current, icon: name }))} aria-label={name} aria-pressed={categoryForm.icon === name} className={`flex flex-col items-center gap-1.5 rounded-xl border p-2.5 text-[10px] font-medium transition ${categoryForm.icon === name ? 'border-blue-500 bg-blue-50 text-blue-700' : 'border-slate-200 text-slate-500 hover:border-blue-200 hover:bg-slate-50'}`}><Icon className="h-5 w-5" />{name}</button>)}</div></fieldset>
+                    </div>
+                    <div className="mt-5 flex gap-2"><button type="submit" disabled={savingCategory} className="min-h-10 flex-1 rounded-xl bg-blue-700 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-800 disabled:opacity-60">{savingCategory ? 'Menyimpan...' : editingCategoryId ? 'Simpan perubahan' : 'Tambah kategori'}</button>{editingCategoryId && <button type="button" onClick={() => { setEditingCategoryId(null); setCategoryForm({ name: '', icon: 'Smartphone' }); }} className="min-h-10 rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-50">Batal</button>}</div>
+                  </form>
+                  <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white"><div className="border-b border-slate-100 px-5 py-4"><h3 className="text-sm font-bold">Kategori tersimpan</h3><p className="mt-0.5 text-xs text-slate-400">{categories.length} kategori · kategori yang memiliki listing tidak dapat dihapus</p></div>{categories.length ? <ul className="divide-y divide-slate-100">{categories.map((category) => { const Icon = CATEGORY_ICONS[category.icon] || Layers3; return <li key={category.id} className="flex items-center justify-between gap-3 px-5 py-4"><div className="flex min-w-0 items-center gap-3"><span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-700"><Icon className="h-5 w-5" /></span><div className="min-w-0"><p className="truncate text-sm font-semibold text-slate-700">{category.name}</p><p className="mt-0.5 truncate text-xs text-slate-400">/{category.slug}</p></div></div><div className="flex shrink-0 gap-2"><button type="button" onClick={() => { setEditingCategoryId(category.id); setCategoryForm({ name: category.name, icon: category.icon }); setError(''); setNotice(''); }} aria-label={`Ubah ${category.name}`} className="rounded-lg border border-slate-200 p-2 text-slate-500 hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700"><Pencil className="h-4 w-4" /></button><button type="button" onClick={() => deleteCategory(category)} aria-label={`Hapus ${category.name}`} className="rounded-lg border border-slate-200 p-2 text-slate-500 hover:border-red-200 hover:bg-red-50 hover:text-red-700"><Trash2 className="h-4 w-4" /></button></div></li>; })}</ul> : <p className="px-5 py-10 text-center text-sm text-slate-400">Belum ada kategori.</p>}</section>
+                </div>
               </> : section === 'admins' ? <>
                 <div className="mb-6"><h2 className="text-xl font-bold tracking-tight">Kelola admin</h2><p className="mt-1 text-sm text-slate-500">Atur siapa saja yang memiliki akses ke dashboard admin.</p></div>
                 <div role="tablist" aria-label="Kelola admin" className="mb-5 flex w-fit gap-1 rounded-xl border border-slate-200 bg-white p-1">

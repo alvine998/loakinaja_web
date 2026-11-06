@@ -4,11 +4,13 @@ import { useRouter } from 'next/router';
 import { Search, Heart, MessageSquare, Menu, X, Coins, PlusCircle, LogOut, LayoutDashboard, Settings, Smartphone } from 'lucide-react';
 import Illustration from './Illustration';
 import { useAuth } from '@/context/AuthContext';
+import { getCategories, type Category } from '@/lib/categories';
 
 const Navbar = () => {
   const router = useRouter();
   const { user, logout } = useAuth();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [categories, setCategories] = useState<Category[]>([]);
 
   const searchable = ['/ppob', '/ppob/order', '/ppob/return'].includes(router.pathname);
 
@@ -17,20 +19,15 @@ const Navbar = () => {
   }, [router.pathname]);
 
   useEffect(() => {
+    getCategories().then(setCategories);
+  }, []);
+
+  useEffect(() => {
     document.body.style.overflow = menuOpen ? 'hidden' : '';
     return () => {
       document.body.style.overflow = '';
     };
   }, [menuOpen]);
-
-  const categories = [
-    { name: 'Handphone', slug: 'handphone' },
-    { name: 'Komputer', slug: 'komputer' },
-    { name: 'Elektronik', slug: 'elektronik' },
-    { name: 'Kamera', slug: 'kamera' },
-    { name: 'Otomotif', slug: 'otomotif' },
-    { name: 'Properti', slug: 'properti' },
-  ];
 
   const helpLinks = [
     { name: 'Cara Belanja', href: '/cara-belanja' },

@@ -565,4 +565,9 @@ export const CATEGORIES = [
   'Properti',
 ];
 
+export async function getProductCategories(): Promise<{ id: string; name: string; slug: string; icon: string }[]> {
+  const { getCategories } = await import('./categories');
+  return getCategories();
+}
+
 export const CONDITIONS = ['Like New', 'Sangat Baik', 'Baik', 'Cukup Baik'];

@@ -12,10 +12,12 @@ import {
   X,
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
+import { formatThousandsInput, parseThousandsInput } from '@/lib/format';
+import LocationSelector from '@/components/LocationSelector';
+import { getCategories, type Category } from '@/lib/categories';
 import {
   createListing,
   getMyListings,
-  CATEGORIES,
   CONDITIONS,
   Listing,
 } from '@/lib/db';
@@ -90,13 +92,14 @@ export default function Jual() {
   const { user, loading, refresh } = useAuth();
 
   const [listings, setListings] = useState<Listing[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
   const [form, setForm] = useState({
     title: '',
-    category: CATEGORIES[0],
+    category: '',
     price: '',
     condition: CONDITIONS[0],
     description: '',
@@ -107,6 +110,16 @@ export default function Jual() {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const totalBytes = images.reduce((sum, img) => sum + img.size, 0);
+
+  useEffect(() => {
+    getCategories().then((nextCategories) => {
+      setCategories(nextCategories);
+      setForm((current) => ({
+        ...current,
+        category: nextCategories.some((category) => category.name === current.category) ? current.category : nextCategories[0]?.name || '',
+      }));
+    });
+  }, []);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -192,7 +205,7 @@ export default function Jual() {
       await createListing({
         title: form.title,
         category: form.category,
-        price: Number(form.price),
+        price: parseThousandsInput(form.price),
         condition: form.condition,
         description: form.description,
         location: form.location,
@@ -203,7 +216,7 @@ export default function Jual() {
       setSuccess('Iklan berhasil dipasang! 1 token telah digunakan.');
       setForm({
         title: '',
-        category: CATEGORIES[0],
+        category: categories[0]?.name || '',
         price: '',
         condition: CONDITIONS[0],
         description: '',
@@ -226,7 +239,7 @@ export default function Jual() {
   }
 
   const cover = images[0]?.dataUrl;
-  const priceNumber = Number(form.price);
+  const priceNumber = parseThousandsInput(form.price);
   const previewPrice =
     form.price !== '' && Number.isFinite(priceNumber) && priceNumber >= 0
       ? `Rp ${priceNumber.toLocaleString('id-ID')}`
@@ -299,12 +312,13 @@ export default function Jual() {
               <div>
                 <label className="block text-sm font-medium text-gray-700">Kategori</label>
                 <select
+                  required
                   value={form.category}
                   onChange={(e) => set('category', e.target.value)}
                   className="mt-1 block w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-loak-blue focus:border-loak-blue sm:text-sm bg-white"
                 >
-                  {CATEGORIES.map((c) => (
-                    <option key={c} value={c}>{c}</option>
+                  {categories.map((category) => (
+                    <option key={category.id} value={category.name}>{category.name}</option>
                   ))}
                 </select>
               </div>
@@ -326,25 +340,17 @@ export default function Jual() {
               <div>
                 <label className="block text-sm font-medium text-gray-700">Harga (Rp)</label>
                 <input
-                  type="number"
-                  min="0"
-                  value={form.price}
-                  onChange={(e) => set('price', e.target.value)}
-                  placeholder="14500000"
-                  className="mt-1 block w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm placeholder-gray-400 focus:outline-none focus:ring-loak-blue focus:border-loak-blue sm:text-sm"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Lokasi</label>
-                <input
                   type="text"
-                  value={form.location}
-                  onChange={(e) => set('location', e.target.value)}
-                  placeholder="Jakarta Selatan"
+                  inputMode="numeric"
+                  value={form.price}
+                  onChange={(e) => set('price', formatThousandsInput(e.target.value))}
+                  placeholder="14.500.000"
                   className="mt-1 block w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm placeholder-gray-400 focus:outline-none focus:ring-loak-blue focus:border-loak-blue sm:text-sm"
                 />
               </div>
             </div>
+
+            <LocationSelector value={form.location} onChange={(location) => set('location', location)} />
 
             <div>
               <label className="block text-sm font-medium text-gray-700">Deskripsi</label>
