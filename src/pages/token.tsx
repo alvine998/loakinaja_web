@@ -74,13 +74,12 @@ export default function TokenPage() {
               <p className="text-center text-xs text-gray-400 mb-4 sm:mb-5">
                 {pkg.tokens} × {formatRupiah(PRICE_PER_TOKEN)} per token
               </p>
-              <button
-                disabled
-                title="Pembelian token belum tersedia di backend"
-                className="mt-auto w-full flex justify-center items-center gap-2 py-3 sm:py-2.5 px-4 rounded-lg text-sm font-bold text-white bg-gray-400 cursor-not-allowed"
+              <Link
+                href={`/checkout?package=${encodeURIComponent(pkg.id)}`}
+                className="mt-auto w-full flex justify-center items-center gap-2 py-3 sm:py-2.5 px-4 rounded-lg text-sm font-bold text-white bg-loak-blue transition-colors hover:bg-loak-blue-dark"
               >
-                <ShoppingCart className="h-4 w-4" /> Segera Hadir
-              </button>
+                <ShoppingCart className="h-4 w-4" /> Beli Token
+              </Link>
             </div>
           ))}
         </div>

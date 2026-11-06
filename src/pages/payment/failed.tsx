@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { AlertCircle, Clock, RefreshCw, XCircle } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
-import { getPaymentMethod, getTokenOrder, TokenOrder } from '@/lib/db';
+import { getTokenOrder, TokenOrder } from '@/lib/db';
 import { formatDateTime, formatRupiah } from '@/lib/format';
 
 export default function PaymentFailedPage() {
@@ -18,9 +18,10 @@ export default function PaymentFailedPage() {
 
   useEffect(() => {
     if (!loading && !user) {
-      router.replace('/login?next=/token');
+      const next = `/payment/failed?order=${encodeURIComponent(String(router.query.order || ''))}`;
+      router.replace(`/login?next=${encodeURIComponent(next)}`);
     }
-  }, [loading, user, router]);
+  }, [loading, user, router, router.query.order]);
 
   useEffect(() => {
     if (!router.isReady) return;
@@ -96,8 +97,6 @@ export default function PaymentFailedPage() {
   }
 
   const expired = order.status === 'expired';
-  const method = getPaymentMethod(order.method);
-
   return (
     <>
       <Head>
@@ -146,8 +145,8 @@ export default function PaymentFailedPage() {
               </dd>
             </div>
             <div className="flex justify-between gap-4">
-              <dt className="text-gray-500">Metode pembayaran</dt>
-              <dd className="text-right text-gray-800">{method?.label ?? order.method}</dd>
+              <dt className="text-gray-500">Payment gateway</dt>
+              <dd className="text-right text-gray-800">Mayar</dd>
             </div>
             <div className="flex justify-between gap-4">
               <dt className="text-gray-500">Dibuat</dt>

@@ -5,33 +5,17 @@ import { useRouter } from 'next/router';
 import {
   AlertCircle,
   ArrowLeft,
-  Building2,
-  Check,
   Coins,
   Info,
-  Store,
-  Wallet,
   XCircle,
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import {
   createTokenOrder,
-  getPaymentMethod,
-  PAYMENT_METHODS,
   PRICE_PER_TOKEN,
   TOKEN_PACKAGES,
 } from '@/lib/db';
 import { formatRupiah } from '@/lib/format';
-
-function GroupIcon({ group }: { group: string }) {
-  if (group === 'Virtual Account') {
-    return <Building2 className="h-4 w-4" />;
-  }
-  if (group === 'E-Wallet') {
-    return <Wallet className="h-4 w-4" />;
-  }
-  return <Store className="h-4 w-4" />;
-}
 
 export default function CheckoutPage() {
   const router = useRouter();
@@ -39,7 +23,6 @@ export default function CheckoutPage() {
 
   const [packageId, setPackageId] = useState('');
   const [ready, setReady] = useState(false);
-  const [methodId, setMethodId] = useState(PAYMENT_METHODS[0].id);
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
@@ -93,21 +76,13 @@ export default function CheckoutPage() {
   }
 
   const amount = pkg.tokens * PRICE_PER_TOKEN;
-  const method = getPaymentMethod(methodId);
-  const groups = PAYMENT_METHODS.reduce<Record<string, typeof PAYMENT_METHODS>>(
-    (acc, m) => {
-      acc[m.group] = [...(acc[m.group] ?? []), m];
-      return acc;
-    },
-    {}
-  );
-
   const handleSubmit = async () => {
     setError('');
     setSubmitting(true);
     try {
-      const order = await createTokenOrder(pkg.id, methodId);
-      router.push(`/payment?order=${encodeURIComponent(order.id)}`);
+      const order = await createTokenOrder(pkg.id);
+      if (!order.paymentUrl) throw new Error('Tautan pembayaran Mayar tidak tersedia.');
+      window.location.assign(order.paymentUrl);
     } catch (err) {
       setError((err as Error).message);
       setSubmitting(false);
@@ -131,7 +106,7 @@ export default function CheckoutPage() {
         <div className="mb-6">
           <h1 className="text-2xl font-bold text-gray-900 sm:text-3xl">Pembayaran</h1>
           <p className="mt-1 text-sm text-gray-500">
-            Pilih metode pembayaran, lalu selesaikan pembayaran sesuai nominal.
+            Lanjutkan ke halaman pembayaran aman Mayar untuk memilih metode pembayaran.
           </p>
         </div>
 
@@ -142,44 +117,17 @@ export default function CheckoutPage() {
         )}
 
         <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_340px] lg:items-start">
-          <div className="space-y-5 rounded-2xl border border-gray-100 bg-white p-5 shadow-sm sm:p-6">
-            <h2 className="text-sm font-bold text-gray-900">Metode Pembayaran</h2>
-
-            {Object.entries(groups).map(([group, methods]) => (
-              <div key={group}>
-                <p className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-gray-400">
-                  <GroupIcon group={group} /> {group}
+          <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm sm:p-6">
+            <div className="flex items-start gap-3 rounded-xl bg-loak-light p-4">
+              <Info className="mt-0.5 h-5 w-5 shrink-0 text-loak-blue" />
+              <div>
+                <h2 className="text-sm font-bold text-gray-900">Pembayaran melalui Mayar</h2>
+                <p className="mt-1 text-sm text-gray-600">
+                  Kamu akan diarahkan ke checkout Mayar untuk memilih metode pembayaran yang tersedia.
+                  Token masuk otomatis setelah pembayaran terkonfirmasi.
                 </p>
-                <div className="space-y-2">
-                  {methods.map((m) => {
-                    const selected = m.id === methodId;
-                    return (
-                      <label
-                        key={m.id}
-                        className={`flex cursor-pointer items-center gap-3 rounded-xl border px-4 py-3 transition-colors ${
-                          selected
-                            ? 'border-loak-blue bg-loak-light'
-                            : 'border-gray-200 hover:border-loak-blue/50 hover:bg-gray-50'
-                        }`}
-                      >
-                        <input
-                          type="radio"
-                          name="payment-method"
-                          value={m.id}
-                          checked={selected}
-                          onChange={() => setMethodId(m.id)}
-                          className="h-4 w-4 shrink-0 accent-loak-blue"
-                        />
-                        <span className="min-w-0 flex-1 text-sm font-medium text-gray-800">
-                          {m.label}
-                        </span>
-                        {selected && <Check className="h-4 w-4 shrink-0 text-loak-blue" />}
-                      </label>
-                    );
-                  })}
-                </div>
               </div>
-            ))}
+            </div>
           </div>
 
           <aside className="lg:sticky lg:top-24" aria-label="Ringkasan pesanan">
@@ -208,8 +156,8 @@ export default function CheckoutPage() {
                   </dd>
                 </div>
                 <div className="flex justify-between gap-4">
-                  <dt className="text-gray-500">Metode pembayaran</dt>
-                  <dd className="text-right text-gray-800">{method?.label ?? '-'}</dd>
+                  <dt className="text-gray-500">Payment gateway</dt>
+                  <dd className="text-right text-gray-800">Mayar</dd>
                 </div>
                 <div className="flex justify-between gap-4 border-t border-gray-100 pt-3">
                   <dt className="font-bold text-gray-900">Total</dt>
@@ -230,8 +178,7 @@ export default function CheckoutPage() {
 
               <p className="mt-3 flex items-start gap-2 text-[11px] leading-relaxed text-gray-400">
                 <Info className="h-4 w-4 shrink-0" />
-                Kode pembayaran akan dibuat setelah kamu menekan Bayar Sekarang. Token
-                otomatis ditambahkan ke akun setelah pembayaran berhasil.
+                Token hanya ditambahkan setelah status transaksi berhasil diverifikasi langsung ke Mayar.
               </p>
             </div>
           </aside>

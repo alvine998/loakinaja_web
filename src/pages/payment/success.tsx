@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { CheckCircle2, Coins, XCircle } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
-import { getPaymentMethod, getTokenOrder, TokenOrder } from '@/lib/db';
+import { getTokenOrder, TokenOrder } from '@/lib/db';
 import { formatDateTime, formatRupiah } from '@/lib/format';
 
 export default function PaymentSuccessPage() {
@@ -19,9 +19,10 @@ export default function PaymentSuccessPage() {
 
   useEffect(() => {
     if (!loading && !user) {
-      router.replace('/login?next=/token');
+      const next = `/payment/success?order=${encodeURIComponent(String(router.query.order || ''))}`;
+      router.replace(`/login?next=${encodeURIComponent(next)}`);
     }
-  }, [loading, user, router]);
+  }, [loading, user, router, router.query.order]);
 
   useEffect(() => {
     if (!router.isReady) return;
@@ -49,12 +50,12 @@ export default function PaymentSuccessPage() {
     };
   }, [ready, user, orderId]);
 
-  // Sync the token balance shown in the navbar with the credited tokens.
+  // Sync the token balance only after the order is confirmed paid.
   useEffect(() => {
-    if (!user || refreshed.current) return;
+    if (!user || order?.status !== 'paid' || refreshed.current) return;
     refreshed.current = true;
     refresh();
-  }, [user, refresh]);
+  }, [user, order?.status, refresh]);
 
   // A success page only makes sense for a settled order.
   useEffect(() => {
@@ -102,8 +103,6 @@ export default function PaymentSuccessPage() {
   if (!order) {
     return <p className="text-center text-gray-500 py-20">Memuat pesanan...</p>;
   }
-
-  const method = getPaymentMethod(order.method);
 
   return (
     <>
@@ -153,8 +152,8 @@ export default function PaymentSuccessPage() {
               </dd>
             </div>
             <div className="flex justify-between gap-4">
-              <dt className="text-gray-500">Metode pembayaran</dt>
-              <dd className="text-right text-gray-800">{method?.label ?? order.method}</dd>
+              <dt className="text-gray-500">Payment gateway</dt>
+              <dd className="text-right text-gray-800">Mayar</dd>
             </div>
             <div className="flex justify-between gap-4">
               <dt className="text-gray-500">Waktu pembayaran</dt>

@@ -4,26 +4,19 @@ import Link from 'next/link';
 import { useRouter } from 'next/router';
 import {
   AlertCircle,
-  Check,
   Clock,
-  Copy,
-  Loader2,
   RefreshCw,
-  ShieldCheck,
   XCircle,
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import {
-  failTokenOrder,
-  getPaymentMethod,
   getTokenOrder,
-  payTokenOrder,
+  verifyTokenOrder,
   TokenOrder,
 } from '@/lib/db';
-import { formatCountdown, formatPaymentCode, formatRupiah } from '@/lib/format';
+import { formatCountdown, formatRupiah } from '@/lib/format';
 
-const POLL_INTERVAL_MS = 5000;
-const GATEWAY_DELAY_MS = 1200;
+const POLL_INTERVAL_MS = 30000;
 
 export default function WaitingPaymentPage() {
   const router = useRouter();
@@ -33,28 +26,37 @@ export default function WaitingPaymentPage() {
   const [ready, setReady] = useState(false);
   const [order, setOrder] = useState<TokenOrder | null>(null);
   const [notFound, setNotFound] = useState(false);
-  const [verifying, setVerifying] = useState(false);
-  const [canceling, setCanceling] = useState(false);
-  const [copied, setCopied] = useState(false);
   const [error, setError] = useState('');
   const [now, setNow] = useState(() => Date.now());
 
   const expired = order ? Date.parse(order.expiresAt) <= now : false;
 
   const syncOrder = useCallback(async () => {
-    const found = await getTokenOrder(orderId);
-    if (!found) {
-      setNotFound(true);
-      return;
+    try {
+      const found = await verifyTokenOrder(orderId);
+      setError('');
+      setOrder(found);
+    } catch (verificationError) {
+      setError((verificationError as Error).message);
+      try {
+        const found = await getTokenOrder(orderId);
+        if (!found) {
+          setNotFound(true);
+          return;
+        }
+        setOrder(found);
+      } catch (orderError) {
+        setError((orderError as Error).message);
+      }
     }
-    setOrder(found);
   }, [orderId]);
 
   useEffect(() => {
     if (!loading && !user) {
-      router.replace('/login?next=/token');
+      const next = `/payment?order=${encodeURIComponent(String(router.query.order || ''))}`;
+      router.replace(`/login?next=${encodeURIComponent(next)}`);
     }
-  }, [loading, user, router]);
+  }, [loading, user, router, router.query.order]);
 
   useEffect(() => {
     if (!router.isReady) return;
@@ -97,45 +99,6 @@ export default function WaitingPaymentPage() {
     syncOrder();
   }, [expired, order?.status, syncOrder]);
 
-  const handleCopy = async () => {
-    if (!order) return;
-    try {
-      await navigator.clipboard.writeText(order.paymentCode);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } catch {
-      setError('Gagal menyalin kode. Salin manual ya.');
-    }
-  };
-
-  const handlePaid = async () => {
-    setError('');
-    setVerifying(true);
-    try {
-      // The delay stands in for the payment gateway callback.
-      const [paid] = await Promise.all([
-        payTokenOrder(orderId),
-        new Promise((resolve) => setTimeout(resolve, GATEWAY_DELAY_MS)),
-      ]);
-      setOrder(paid);
-    } catch (err) {
-      setError((err as Error).message);
-      await syncOrder();
-      setVerifying(false);
-    }
-  };
-
-  const handleCancel = async () => {
-    setError('');
-    setCanceling(true);
-    try {
-      setOrder(await failTokenOrder(orderId));
-    } catch (err) {
-      setError((err as Error).message);
-      setCanceling(false);
-    }
-  };
-
   if (loading) {
     return <p className="text-center text-gray-500 py-20">Memuat...</p>;
   }
@@ -173,8 +136,6 @@ export default function WaitingPaymentPage() {
     return <p className="text-center text-gray-500 py-20">Memuat pesanan...</p>;
   }
 
-  const method = getPaymentMethod(order.method);
-
   return (
     <>
       <Head>
@@ -190,7 +151,7 @@ export default function WaitingPaymentPage() {
             Menunggu Pembayaran
           </h1>
           <p className="mt-1 text-sm text-gray-500">
-            Selesaikan pembayaran sebelum waktu habis agar token langsung masuk.
+            Selesaikan pembayaran melalui Mayar agar token langsung masuk.
           </p>
           <div
             className={`mt-4 inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold ${
@@ -199,7 +160,7 @@ export default function WaitingPaymentPage() {
           >
             <Clock className="h-4 w-4" />
             {expired
-              ? 'Waktu pembayaran habis'
+              ? 'Melewati batas waktu; memeriksa status Mayar'
               : `Sisa waktu ${formatCountdown(Date.parse(order.expiresAt) - now)}`}
           </div>
         </div>
@@ -214,28 +175,29 @@ export default function WaitingPaymentPage() {
           <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
             <div>
               <p className="text-xs font-semibold uppercase tracking-wider text-gray-400">
-                {method?.codeLabel ?? 'Kode Pembayaran'}
+                Gateway Pembayaran
               </p>
-              <p className="text-xs text-gray-500">{method?.label ?? order.method}</p>
+              <p className="text-xs text-gray-500">Mayar</p>
             </div>
             <p className="text-xs text-gray-400">
               Pesanan #{order.id}
             </p>
           </div>
 
-          <div className="mt-3 flex items-center gap-2 rounded-xl border border-dashed border-loak-blue/40 bg-loak-light px-4 py-3">
-            <span className="min-w-0 flex-1 break-all font-mono text-lg font-bold tracking-wider text-loak-blue-dark sm:text-xl">
-              {formatPaymentCode(order.paymentCode)}
-            </span>
-            <button
-              type="button"
-              onClick={handleCopy}
-              aria-label="Salin kode pembayaran"
-              className="flex shrink-0 items-center gap-1.5 rounded-lg bg-white px-3 py-2 text-xs font-semibold text-loak-blue-dark transition-colors hover:bg-loak-blue hover:text-white"
-            >
-              {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
-              {copied ? 'Tersalin' : 'Salin'}
-            </button>
+          <div className="mt-3 rounded-xl border border-dashed border-loak-blue/40 bg-loak-light px-4 py-4 text-center">
+            <p className="text-sm text-gray-700">
+              Selesaikan pembayaran melalui checkout Mayar. Halaman ini akan memperbarui status pesanan otomatis.
+            </p>
+            {order.paymentUrl && (
+              <a
+                href={order.paymentUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="mt-3 inline-flex rounded-lg bg-loak-blue px-4 py-2.5 text-sm font-bold text-white transition-colors hover:bg-loak-blue-dark"
+              >
+                Buka Pembayaran Mayar
+              </a>
+            )}
           </div>
 
           <div className="mt-5 rounded-xl bg-gray-50 px-4 py-4 text-center">
@@ -250,70 +212,17 @@ export default function WaitingPaymentPage() {
             </p>
           </div>
 
-          {method && (
-            <div className="mt-5">
-              <p className="text-sm font-bold text-gray-900">Cara Pembayaran</p>
-              <ol className="mt-2 space-y-2">
-                {method.instructions.map((instruction, index) => (
-                  <li key={instruction} className="flex gap-3 text-sm text-gray-600">
-                    <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-loak-light text-[11px] font-bold text-loak-blue">
-                      {index + 1}
-                    </span>
-                    <span className="min-w-0">{instruction}</span>
-                  </li>
-                ))}
-              </ol>
-            </div>
-          )}
-
-          <div className="mt-6 flex flex-col gap-3 sm:flex-row">
-            <button
-              type="button"
-              onClick={handlePaid}
-              disabled={verifying || canceling || expired}
-              className="flex w-full items-center justify-center gap-2 rounded-xl bg-loak-blue px-4 py-3.5 text-sm font-bold text-white transition-colors hover:bg-loak-blue-dark disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              {verifying ? (
-                <>
-                  <Loader2 className="h-4 w-4 animate-spin" /> Memverifikasi pembayaran...
-                </>
-              ) : (
-                <>
-                  <ShieldCheck className="h-4 w-4" /> Saya Sudah Bayar
-                </>
-              )}
-            </button>
-            <button
-              type="button"
-              onClick={handleCancel}
-              disabled={verifying || canceling || expired}
-              className="flex w-full items-center justify-center gap-2 rounded-xl border border-gray-200 px-4 py-3.5 text-sm font-semibold text-gray-600 transition-colors hover:border-red-200 hover:bg-red-50 hover:text-red-600 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              {canceling ? (
-                <>
-                  <Loader2 className="h-4 w-4 animate-spin" /> Membatalkan...
-                </>
-              ) : (
-                'Batalkan Pesanan'
-              )}
-            </button>
-          </div>
+          <p className="mt-5 text-center text-xs text-gray-500">
+            Status diperiksa ke Mayar secara berkala. Kamu juga bisa kembali lagi nanti untuk melihat hasilnya.
+          </p>
 
           <button
             type="button"
-            onClick={() => syncOrder()}
+            onClick={syncOrder}
             className="mx-auto mt-4 flex items-center justify-center gap-1.5 text-xs font-medium text-gray-400 transition-colors hover:text-loak-blue"
           >
-            <RefreshCw className="h-3.5 w-3.5" /> Perbarui status pembayaran
+            <RefreshCw className="h-3.5 w-3.5" /> Periksa pembayaran sekarang
           </button>
-        </div>
-
-        <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs leading-relaxed text-amber-800">
-          <span className="font-semibold">Mode demo:</span> belum ada payment gateway
-          yang terhubung, jadi status pembayaran tidak dicek otomatis. Gunakan{' '}
-          <span className="font-semibold">Saya Sudah Bayar</span> untuk simulasi
-          pembayaran berhasil, atau <span className="font-semibold">Batalkan Pesanan</span>{' '}
-          untuk simulasi pembayaran gagal.
         </div>
 
         <p className="mt-4 text-center text-xs text-gray-400">

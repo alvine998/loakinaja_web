@@ -9,6 +9,7 @@ import {
   Send,
   ShieldCheck,
 } from 'lucide-react';
+import { apiRequest } from '@/lib/api';
 
 type EscrowState = 'NONE' | 'REQUESTED' | 'ACCEPTED' | 'VERIFYING' | 'VERIFIED';
 
@@ -28,6 +29,8 @@ type Contact = {
   listing: string;
   initial: string;
 };
+
+type EscrowAccount = { bankName: string; accountNumber: string; accountHolder: string };
 
 const CONTACTS: Contact[] = [
   {
@@ -100,6 +103,7 @@ export default function ChatPage() {
   const [messages, setMessages] = useState<Record<string, Message[]>>(INITIAL_MESSAGES);
   const [escrow, setEscrow] = useState<Record<string, EscrowState>>(DEFAULT_ESCROW);
   const [inputText, setInputText] = useState('');
+  const [escrowAccount, setEscrowAccount] = useState<EscrowAccount | null>(null);
 
   const nextId = useRef(100);
   const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
@@ -112,6 +116,12 @@ export default function ChatPage() {
   useEffect(() => {
     const pending = timers.current;
     return () => pending.forEach(clearTimeout);
+  }, []);
+
+  useEffect(() => {
+    apiRequest<{ data: EscrowAccount | null }>('/escrow-accounts/active')
+      .then((response) => setEscrowAccount(response.data))
+      .catch(() => setEscrowAccount(null));
   }, []);
 
   useEffect(() => {
@@ -353,23 +363,17 @@ export default function ChatPage() {
                     Penjual telah menyetujui. Silakan lakukan pembayaran ke rekening
                     resmi LoakinAja:
                   </p>
-                  <div className="mb-3 rounded-lg border border-gray-200 bg-gray-50 p-3 text-center sm:mb-4">
+                  {escrowAccount ? <div className="mb-3 rounded-lg border border-gray-200 bg-gray-50 p-3 text-center sm:mb-4">
                     <QrCode className="mx-auto mb-2 h-20 w-20 text-gray-800 sm:h-24 sm:w-24" />
-                    <p className="text-sm font-bold text-gray-900 sm:text-base">
-                      BCA 1234567890
-                    </p>
-                    <p className="text-xs text-gray-500">a.n PT LoakinAja Aman</p>
-                    <p className="mt-2 text-lg font-extrabold text-loak-blue">
-                      Rp 14.550.000
-                    </p>
-                    <p className="text-[10px] text-gray-400">
-                      (Termasuk biaya admin Rp 50.000)
-                    </p>
-                  </div>
+                    <p className="text-sm font-bold text-gray-900 sm:text-base">{escrowAccount.bankName} {escrowAccount.accountNumber}</p>
+                    <p className="text-xs text-gray-500">a.n. {escrowAccount.accountHolder}</p>
+                    <p className="mt-2 text-xs text-gray-500">Pastikan nama pemilik dan nomor rekening sesuai sebelum melakukan transfer.</p>
+                  </div> : <div role="status" className="mb-3 rounded-lg border border-amber-200 bg-amber-50 p-3 text-center text-xs text-amber-800 sm:mb-4">Rekening pembayaran belum tersedia. Silakan hubungi admin sebelum melakukan transfer.</div>}
                   <button
                     type="button"
                     onClick={markPaid}
-                    className="w-full rounded-lg bg-loak-blue py-2.5 text-sm font-bold text-white transition-colors hover:bg-loak-blue-dark"
+                    disabled={!escrowAccount}
+                    className="w-full rounded-lg bg-loak-blue py-2.5 text-sm font-bold text-white transition-colors hover:bg-loak-blue-dark disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     Saya Sudah Bayar
                   </button>

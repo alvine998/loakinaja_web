@@ -8,8 +8,8 @@ The frontend uses the Express backend in `../loakinaja_api`. Copy `.env.example`
 to `.env.local` and set `NEXT_PUBLIC_API_URL` (default:
 `http://localhost:4000/api`). Start MySQL and the backend first, then run the
 frontend with `npm run dev`. Account and listing data are served by the API;
-payment orders and OTP password recovery are not enabled until their backend
-endpoints are available. Admin sign-in and listing review use the Express API;
+token purchases use Mayar through the API backend. OTP password recovery is not
+enabled until its backend endpoints are available. Admin sign-in and listing review use the Express API;
 set `ADMIN_EMAIL` and `ADMIN_PASSWORD` in the backend environment. New listings
 remain pending until approved in `/admin`.
 
