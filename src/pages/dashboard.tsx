@@ -35,6 +35,7 @@ import {
 } from '@/lib/db';
 
 type Filter = 'all' | ListingStatus;
+type DashboardTab = 'listings' | 'withdrawal';
 
 const FILTERS: { id: Filter; label: string }[] = [
   { id: 'all', label: 'Semua' },
@@ -95,6 +96,7 @@ export default function DashboardPenjual() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [fetching, setFetching] = useState(true);
   const [filter, setFilter] = useState<Filter>('all');
+  const [activeTab, setActiveTab] = useState<DashboardTab>('listings');
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
   const [busyId, setBusyId] = useState<string | null>(null);
@@ -322,9 +324,47 @@ export default function DashboardPenjual() {
           />
         </div>
 
-        <SellerWithdrawal />
+        <div className="mt-8">
+          <div className="mb-6 flex border-b border-gray-200" role="tablist" aria-label="Menu dashboard penjual">
+            <button
+              id="dashboard-tab-listings"
+              type="button"
+              role="tab"
+              aria-selected={activeTab === 'listings'}
+              aria-controls="dashboard-panel-listings"
+              onClick={() => setActiveTab('listings')}
+              className={`min-h-12 flex-1 border-b-2 px-4 text-sm font-semibold transition-colors sm:flex-none sm:px-6 ${
+                activeTab === 'listings'
+                  ? 'border-loak-blue text-loak-blue'
+                  : 'border-transparent text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              Iklan Saya
+            </button>
+            <button
+              id="dashboard-tab-withdrawal"
+              type="button"
+              role="tab"
+              aria-selected={activeTab === 'withdrawal'}
+              aria-controls="dashboard-panel-withdrawal"
+              onClick={() => setActiveTab('withdrawal')}
+              className={`min-h-12 flex-1 border-b-2 px-4 text-sm font-semibold transition-colors sm:flex-none sm:px-6 ${
+                activeTab === 'withdrawal'
+                  ? 'border-loak-blue text-loak-blue'
+                  : 'border-transparent text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              Penarikan
+            </button>
+          </div>
 
-        <div className="mt-10">
+          {activeTab === 'withdrawal' ? (
+            <div id="dashboard-panel-withdrawal" role="tabpanel" aria-labelledby="dashboard-tab-withdrawal">
+              <SellerWithdrawal />
+            </div>
+          ) : (
+            <div id="dashboard-panel-listings" role="tabpanel" aria-labelledby="dashboard-tab-listings">
+        <div>
           <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <h2 className="text-lg font-semibold text-gray-900">Iklan Saya</h2>
             <div className="flex gap-1 rounded-lg bg-gray-100 p-1">
@@ -473,6 +513,9 @@ export default function DashboardPenjual() {
                   </div>
                 );
               })}
+            </div>
+          )}
+        </div>
             </div>
           )}
         </div>

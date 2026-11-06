@@ -20,7 +20,7 @@ export default function HubungiKami() {
               </div>
               <div>
                 <h4 className="font-bold text-gray-900">Email</h4>
-                <p className="text-gray-600">support@loakinaja.com</p>
+                 <a href="mailto:support@loakinaja.com" className="text-gray-600 underline">support@loakinaja.com</a>
               </div>
             </div>
             <div className="flex items-start gap-4">
@@ -29,7 +29,7 @@ export default function HubungiKami() {
               </div>
               <div>
                 <h4 className="font-bold text-gray-900">Telepon & WhatsApp</h4>
-                <p className="text-gray-600">0812-3456-7890</p>
+                 <a href="tel:+6281234567890" className="text-gray-600 underline">0812-3456-7890</a>
               </div>
             </div>
             <div className="flex items-start gap-4">

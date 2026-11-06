@@ -33,6 +33,8 @@ const Footer = () => {
             <h4 className="text-sm font-semibold text-gray-900 uppercase tracking-wider mb-4">Bantuan</h4>
             <ul className="space-y-2">
               <li><Link href="/syarat-ketentuan" className="text-sm text-gray-500 hover:text-loak-blue">Syarat dan Ketentuan</Link></li>
+              <li><Link href="/tentang-kami" className="text-sm text-gray-500 hover:text-loak-blue">Tentang Kami</Link></li>
+              <li><Link href="/harga" className="text-sm text-gray-500 hover:text-loak-blue">Harga</Link></li>
               <li><Link href="/kebijakan-privasi" className="text-sm text-gray-500 hover:text-loak-blue">Kebijakan Privasi</Link></li>
               <li><Link href="/hubungi-kami" className="text-sm text-gray-500 hover:text-loak-blue">Hubungi Kami</Link></li>
               <li><Link href="/faq" className="text-sm text-gray-500 hover:text-loak-blue">FAQ</Link></li>

@@ -3,6 +3,13 @@ import { useRouter } from 'next/router';
 import { Search } from 'lucide-react';
 import { getListings, Listing } from '@/lib/db';
 
+declare module 'react' {
+  interface FormHTMLAttributes<T> {
+    toolname?: string;
+    tooldescription?: string;
+  }
+}
+
 export default function ProductSearch({ isPpob = false }: { isPpob?: boolean }) {
   const router = useRouter();
   const containerRef = useRef<HTMLFormElement>(null);
@@ -79,7 +86,7 @@ export default function ProductSearch({ isPpob = false }: { isPpob?: boolean }) 
   };
 
   return (
-    <form ref={containerRef} onSubmit={submitSearch} className="relative w-full">
+    <form ref={containerRef} onSubmit={submitSearch} className="relative w-full" toolname="Search LoakinAja products" tooldescription="Search the public LoakinAja marketplace by product keywords and open matching product listings.">
       <div className="relative">
         <Search className="pointer-events-none absolute inset-y-0 left-3 my-auto h-5 w-5 text-gray-400" />
         <input

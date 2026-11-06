@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import SEO from '@/components/SEO';
-import Link from 'next/link';
 import { Smartphone, Search, ShieldCheck, BadgeCheck, Truck, ArrowRight, Sparkles, Zap, Droplets, HeartPulse, Wifi, Receipt } from 'lucide-react';
-import { getListings, Listing } from '@/lib/db';
+import { getListings, Listing, PRICE_PER_TOKEN, TOKEN_PACKAGES } from '@/lib/db';
 import { CATEGORY_ICONS, DEFAULT_CATEGORIES, getCategories, type Category } from '@/lib/categories';
+import Head from 'next/head';
+import Link from 'next/link';
 
 export default function Home() {
   const [products, setProducts] = useState<Listing[]>([]);
@@ -38,6 +39,26 @@ export default function Home() {
 
   return (
     <>
+      <Head>
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify([
+          {
+            '@context': 'https://schema.org',
+            '@type': 'Organization',
+            '@id': 'https://loakinaja.com/#organization',
+            name: 'LoakinAja',
+            url: 'https://loakinaja.com/',
+            description: 'Marketplace Indonesia untuk jual beli barang bekas berkualitas dengan dukungan Rekening Bersama.',
+            email: 'support@loakinaja.com',
+            telephone: '+62-812-3456-7890',
+            contactPoint: { '@type': 'ContactPoint', contactType: 'customer support', email: 'support@loakinaja.com', telephone: '+62-812-3456-7890', availableLanguage: ['Indonesian'] },
+            address: { '@type': 'PostalAddress', streetAddress: 'Gedung Inovasi Lt. 5, Jl. Jend. Sudirman No. 123', addressLocality: 'Jakarta Selatan', postalCode: '12190', addressCountry: 'ID' },
+          },
+          { '@context': 'https://schema.org', '@type': 'WebSite', '@id': 'https://loakinaja.com/#website', url: 'https://loakinaja.com/', name: 'LoakinAja', inLanguage: 'id-ID', publisher: { '@id': 'https://loakinaja.com/#organization' }, potentialAction: { '@type': 'SearchAction', target: 'https://loakinaja.com/category/semua?q={search_term_string}', 'query-input': 'required name=search_term_string' } },
+          { '@context': 'https://schema.org', '@type': 'WebPage', '@id': 'https://loakinaja.com/#webpage', url: 'https://loakinaja.com/', name: 'LoakinAja - Jual Beli Barang Bekas Terpercaya', isPartOf: { '@id': 'https://loakinaja.com/#website' }, about: { '@id': 'https://loakinaja.com/#organization' }, inLanguage: 'id-ID' },
+          { '@context': 'https://schema.org', '@type': 'OfferCatalog', name: 'Paket token untuk memasang iklan', url: 'https://loakinaja.com/harga', itemListElement: TOKEN_PACKAGES.map((item) => ({ '@type': 'Offer', name: `${item.tokens} Token - ${item.label}`, price: item.price, priceCurrency: 'IDR', url: 'https://loakinaja.com/harga' })) },
+        ]) }} />
+        <meta name="content-signal" content="search=yes, ai-train=no" />
+      </Head>
       <SEO />
 
       <div className="flex flex-col gap-12">
@@ -125,7 +146,7 @@ export default function Home() {
         </section>
 
         {/* Trust / Features */}
-        <section className="grid gap-4 sm:grid-cols-3">
+        <section aria-label="Keunggulan marketplace" className="grid gap-4 sm:grid-cols-3">
           {features.map((f) => (
             <div
               key={f.title}
@@ -150,7 +171,7 @@ export default function Home() {
               <p className="mt-1 text-sm text-gray-500">Pilih kategori untuk mulai menjelajah</p>
             </div>
           </div>
-          <div className="grid grid-cols-3 gap-3 sm:gap-4 md:grid-cols-6">
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-6">
             {categories.map((category) => (
               <Link href={`/category/${category.slug}`} key={category.id} className="group">
                 <div className="flex flex-col items-center justify-center gap-2 sm:gap-3 rounded-2xl border border-gray-100 bg-white p-4 shadow-sm transition-all hover:-translate-y-1 hover:border-loak-blue/30 hover:shadow-lg sm:p-5">
@@ -180,7 +201,7 @@ export default function Home() {
               </Link>
             </div>
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-              {billCategories.map((category) => (
+              {billCategories.slice(0, 3).map((category) => (
                 <Link href="/ppob" key={category.name} className="group flex items-center gap-3 rounded-xl border border-gray-100 bg-white p-3 transition-all hover:-translate-y-0.5 hover:border-loak-blue/30 hover:shadow-md sm:p-4">
                   <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-loak-light text-loak-blue transition-colors group-hover:bg-loak-blue group-hover:text-white">
                     {category.icon}
@@ -236,6 +257,20 @@ export default function Home() {
               </p>
             )}
           </div>
+        </section>
+
+        <section aria-label="Informasi LoakinAja" className="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm sm:p-8">
+          <h2 className="text-xl font-bold text-gray-900">Tentang LoakinAja</h2>
+          <p className="mt-2 max-w-3xl text-sm leading-6 text-gray-600">LoakinAja adalah marketplace Indonesia untuk jual beli barang bekas berkualitas. Pengguna dapat menjelajahi produk berdasarkan kategori, lokasi, harga, dan kondisi. Transaksi Rekening Bersama diverifikasi manual oleh administrator.</p>
+          <p className="mt-3 text-sm text-gray-600">Paket penjual mulai dari {TOKEN_PACKAGES[0]?.tokens} token seharga Rp {TOKEN_PACKAGES[0]?.price.toLocaleString('id-ID')} (Rp {PRICE_PER_TOKEN.toLocaleString('id-ID')} per token). <Link href="/harga" className="font-semibold text-loak-blue underline">Lihat semua harga</Link>.</p>
+          <nav aria-label="Tentang dan kebijakan" className="mt-4 flex flex-wrap gap-x-5 gap-y-2 text-sm font-medium">
+            <Link href="/tentang-kami" className="text-loak-blue underline">Tentang kami</Link>
+            <Link href="/hubungi-kami" className="text-loak-blue underline">Kontak</Link>
+            <Link href="/syarat-ketentuan" className="text-loak-blue underline">Syarat dan Ketentuan</Link>
+            <Link href="/kebijakan-privasi" className="text-loak-blue underline">Kebijakan Privasi</Link>
+            <a href="mailto:support@loakinaja.com" className="text-loak-blue underline">support@loakinaja.com</a>
+            <a href="tel:+6281234567890" className="text-loak-blue underline">+62 812-3456-7890</a>
+          </nav>
         </section>
 
         {/* CTA Section */}

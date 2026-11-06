@@ -1,0 +1,29 @@
+{
+  "$schema": "https://modelcontextprotocol.io/schemas/server-card.json",
+  "name": "LoakinAja",
+  "version": "1.0.0",
+  "description": "Indonesian marketplace for buying and selling pre-owned goods, with public product discovery and category browsing.",
+  "endpoint": "https://loakinaja.com/api/mcp",
+  "capabilities": {
+    "tools": [
+      {
+        "name": "search_products",
+        "description": "Search public active product listings by title."
+      },
+      {
+        "name": "list_product_categories",
+        "description": "List public product categories."
+      }
+    ],
+    "resources": [
+      {
+        "uri": "https://loakinaja.com/llms.txt",
+        "mimeType": "text/plain"
+      },
+      {
+        "uri": "https://loakinaja.com/index.md",
+        "mimeType": "text/markdown"
+      }
+    ]
+  }
+}

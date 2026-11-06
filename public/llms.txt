@@ -1,0 +1,35 @@
+# LoakinAja
+
+> LoakinAja is an Indonesian marketplace for buying and selling quality pre-owned goods, with Rekening Bersama (escrow-style) transaction support.
+
+LoakinAja helps people discover second-hand products, publish listings, and pay bills. Listings show their price, condition, location, photos, and seller information. In Rekening Bersama transactions, payment is held until delivery is confirmed; payment verification and seller payouts are currently handled manually by administrators.
+
+## Main pages
+
+- [Home](https://loakinaja.com/): Marketplace overview, categories, and current featured listings.
+- [About LoakinAja](https://loakinaja.com/tentang-kami): Business and marketplace information.
+- [Product categories](https://loakinaja.com/category/semua): Browse active listings.
+- [Pricing](https://loakinaja.com/harga): Public listing-token package prices.
+- [How to buy](https://loakinaja.com/cara-belanja): Buyer guide.
+- [How to sell](https://loakinaja.com/cara-jualan): Seller guide.
+- [Secure transactions](https://loakinaja.com/jaminan-aman): Rekening Bersama information.
+- [Contact](https://loakinaja.com/hubungi-kami): Customer support details.
+- [FAQ](https://loakinaja.com/faq): Frequently asked questions.
+- [Terms](https://loakinaja.com/syarat-ketentuan): Terms and conditions.
+- [Privacy](https://loakinaja.com/kebijakan-privasi): Privacy policy.
+- [Sitemap](https://loakinaja.com/sitemap.xml): Public pages with last-modified dates.
+
+## Contact
+
+- Email: [support@loakinaja.com](mailto:support@loakinaja.com)
+- Phone/WhatsApp: [+62 812-3456-7890](tel:+6281234567890)
+
+## Machine-readable resources
+
+- [Markdown home page](https://loakinaja.com/index.md)
+- [Organization and website JSON-LD](https://loakinaja.com/)
+- [MCP Server Card](https://loakinaja.com/.well-known/mcp/server-card.json)
+
+## Usage
+
+Public page content may be indexed for search. Do not use this site's content to train AI models.
