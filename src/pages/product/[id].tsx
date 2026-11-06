@@ -3,16 +3,23 @@ import Head from 'next/head';
 import { useRouter } from 'next/router';
 import Link from 'next/link';
 import { MessageSquare, ShieldCheck, MapPin, Share2, Heart, ZoomIn, X, ChevronLeft, ChevronRight } from 'lucide-react';
-import { getListing, Listing } from '@/lib/db';
+import { addFavorite, createEscrowSale, getFavoriteStatus, getListing, Listing, removeFavorite } from '@/lib/db';
 import { getCategories } from '@/lib/categories';
+import { useAuth } from '@/context/AuthContext';
 
 export default function ProductPage() {
   const router = useRouter();
+  const { user } = useAuth();
   const { id } = router.query;
   const [product, setProduct] = useState<Listing | null>(null);
   const [error, setError] = useState('');
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const [zoomOpen, setZoomOpen] = useState(false);
+  const [isFavorite, setIsFavorite] = useState(false);
+  const [favoriteBusy, setFavoriteBusy] = useState(false);
+  const [favoriteMessage, setFavoriteMessage] = useState('');
+  const [purchaseBusy, setPurchaseBusy] = useState(false);
+  const [purchaseError, setPurchaseError] = useState('');
   const title = product?.title || 'Memuat produk...';
   const categoryLabel = product?.category || 'Kategori';
   const [categorySlug, setCategorySlug] = useState('');
@@ -22,6 +29,51 @@ export default function ProductPage() {
     if (typeof id !== 'string') return;
     getListing(id).then(setProduct).catch((reason: Error) => setError(reason.message));
   }, [id]);
+
+  useEffect(() => {
+    if (!user || typeof id !== 'string') {
+      setIsFavorite(false);
+      return;
+    }
+    getFavoriteStatus(id).then(setIsFavorite).catch(() => setIsFavorite(false));
+  }, [id, user]);
+
+  const toggleFavorite = async () => {
+    if (!user) {
+      await router.push(`/login?next=${encodeURIComponent(router.asPath)}`);
+      return;
+    }
+    if (!product) return;
+    setFavoriteBusy(true);
+    setFavoriteMessage('');
+    try {
+      if (isFavorite) await removeFavorite(product.id);
+      else await addFavorite(product.id);
+      setIsFavorite(!isFavorite);
+      setFavoriteMessage(isFavorite ? 'Dihapus dari Favorit Saya.' : 'Ditambahkan ke Favorit Saya.');
+    } catch (reason) {
+      setFavoriteMessage((reason as Error).message);
+    } finally {
+      setFavoriteBusy(false);
+    }
+  };
+
+  const startEscrowPurchase = async () => {
+    if (!user) {
+      await router.push(`/login?next=${encodeURIComponent(router.asPath)}`);
+      return;
+    }
+    if (!product) return;
+    setPurchaseBusy(true);
+    setPurchaseError('');
+    try {
+      const sale = await createEscrowSale(product.id);
+      await router.push(`/escrow/${sale.id}`);
+    } catch (reason) {
+      setPurchaseError((reason as Error).message);
+      setPurchaseBusy(false);
+    }
+  };
 
   useEffect(() => {
     if (!product?.category) return;
@@ -113,13 +165,14 @@ export default function ProductPage() {
             </div>
             
             <div className="flex gap-4">
-              <button className="flex items-center gap-2 text-gray-600 hover:text-loak-blue text-sm font-medium">
-                <Heart className="w-5 h-5" /> Favorit
+              <button type="button" onClick={toggleFavorite} disabled={favoriteBusy} aria-pressed={isFavorite} className={`flex items-center gap-2 text-sm font-medium transition-colors disabled:opacity-60 ${isFavorite ? 'text-red-500' : 'text-gray-600 hover:text-loak-blue'}`}>
+                <Heart className={`h-5 w-5 ${isFavorite ? 'fill-current' : ''}`} /> {isFavorite ? 'Favorit' : 'Tambah Favorit'}
               </button>
               <button className="flex items-center gap-2 text-gray-600 hover:text-loak-blue text-sm font-medium">
                 <Share2 className="w-5 h-5" /> Bagikan
               </button>
             </div>
+            {favoriteMessage && <p role="status" className="mt-3 text-xs text-gray-500">{favoriteMessage}</p>}
           </div>
 
           {/* Action Card */}
@@ -143,14 +196,15 @@ export default function ProductPage() {
               </div>
 
               <div className="space-y-3">
+                {purchaseError && <p role="alert" className="text-xs text-red-600">{purchaseError}</p>}
                 <Link href="/chat" className="w-full flex items-center justify-center gap-2 py-3 px-4 border border-loak-blue rounded-lg text-sm font-bold text-loak-blue hover:bg-loak-light transition-colors">
                   <MessageSquare className="w-5 h-5" />
                   Chat Penjual
                 </Link>
                 
-                <Link href="/chat" className="w-full block text-center py-3 px-4 rounded-lg text-sm font-bold text-white bg-loak-blue hover:bg-loak-blue-dark transition-colors shadow-sm">
-                  Beli Langsung
-                </Link>
+                <button type="button" onClick={startEscrowPurchase} disabled={purchaseBusy || !product || product.status !== 'active'} className="w-full rounded-lg bg-loak-blue px-4 py-3 text-sm font-bold text-white shadow-sm transition-colors hover:bg-loak-blue-dark disabled:cursor-not-allowed disabled:opacity-60">
+                  {purchaseBusy ? 'Menyiapkan Rekening Bersama...' : 'Beli dengan Rekening Bersama'}
+                </button>
               </div>
             </div>
           </div>

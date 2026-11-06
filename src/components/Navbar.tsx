@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
-import { Search, Heart, MessageSquare, Menu, X, Coins, PlusCircle, LogOut, LayoutDashboard, Settings, Smartphone } from 'lucide-react';
+import { Heart, MessageSquare, Menu, X, Coins, PlusCircle, LogOut, LayoutDashboard, Settings, Smartphone } from 'lucide-react';
 import Illustration from './Illustration';
 import { useAuth } from '@/context/AuthContext';
 import { getCategories, type Category } from '@/lib/categories';
+import ProductSearch from './ProductSearch';
 
 const Navbar = () => {
   const router = useRouter();
@@ -52,14 +53,7 @@ const Navbar = () => {
           {/* Search Bar (Desktop) */}
           <div className="hidden lg:flex flex-1 justify-center px-2 lg:ml-6 lg:justify-end">
             <div className="max-w-lg w-full lg:max-w-xs relative">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <Search className="h-5 w-5 text-gray-400" />
-              </div>
-              <input
-                className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:border-loak-blue focus:ring-1 focus:ring-loak-blue sm:text-sm transition-colors"
-                placeholder={searchable ? 'Cari produk PPOB...' : 'Cari barang bekas...'}
-                type="search"
-              />
+              <ProductSearch isPpob={searchable} />
             </div>
           </div>
 
@@ -145,16 +139,7 @@ const Navbar = () => {
 
         {/* Search Bar (Mobile) */}
         <div className="lg:hidden pb-3">
-          <div className="relative">
-            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <Search className="h-5 w-5 text-gray-400" />
-            </div>
-            <input
-              className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:border-loak-blue focus:ring-1 focus:ring-loak-blue sm:text-sm transition-colors"
-              placeholder={searchable ? 'Cari produk PPOB...' : 'Cari barang bekas...'}
-              type="search"
-            />
-          </div>
+          <ProductSearch isPpob={searchable} />
         </div>
       </div>
 

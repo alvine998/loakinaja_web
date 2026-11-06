@@ -1,7 +1,11 @@
 import React from 'react';
 import Head from 'next/head';
+import Link from 'next/link';
+import { useAuth } from '@/context/AuthContext';
+import SellerWithdrawal from '@/components/SellerWithdrawal';
 
 export default function TarikDana() {
+  const { user } = useAuth();
   return (
     <>
       <Head>
@@ -14,19 +18,18 @@ export default function TarikDana() {
           <img src="/illustrations/credit-card-payment.svg" alt="Ilustrasi pembayaran kartu" className="h-28 w-auto" />
         </div>
         <div className="space-y-4 text-gray-600 leading-relaxed">
-          <p>Setelah barang Anda terjual dan dikonfirmasi oleh pembeli, dana akan masuk ke Saldo LoakinAja Anda. Berikut adalah cara untuk menarik dana ke rekening pribadi:</p>
+          <p>Hasil penjualan melalui Rekening Bersama masuk ke saldo tersedia setelah pembeli mengonfirmasi barang telah diterima. Permintaan penarikan diproses admin ke rekening bank yang Anda daftarkan pada formulir.</p>
           <ul className="list-disc pl-6 space-y-2">
-            <li>Buka menu <strong>Saldo Saya</strong> dari profil Anda.</li>
-            <li>Pastikan Anda telah menambahkan Rekening Bank yang valid dan atas nama Anda sendiri.</li>
-            <li>Klik tombol <strong>Tarik Dana</strong>.</li>
-            <li>Masukkan nominal dana yang ingin ditarik.</li>
-            <li>Masukkan PIN keamanan atau konfirmasi OTP yang dikirimkan ke nomor Anda.</li>
-            <li>Tunggu proses pencairan. Dana biasanya akan masuk ke rekening Anda dalam waktu 1x24 jam kerja.</li>
+            <li>Pastikan saldo berasal dari transaksi Rekening Bersama berstatus selesai.</li>
+            <li>Masukkan nominal minimal Rp 10.000 dan detail rekening tujuan.</li>
+            <li>Kirim permintaan penarikan dan pantau statusnya di Dashboard Penjual.</li>
+            <li>Admin akan memeriksa dan melakukan transfer secara manual. Saldo dikembalikan jika permintaan ditolak.</li>
           </ul>
           <p className="mt-4 text-sm text-gray-500">
-            *Catatan: Minimal penarikan dana adalah Rp 10.000. Beberapa bank mungkin mengenakan biaya transfer sesuai kebijakan bank masing-masing.
+            *Catatan: Penandaan iklan sebagai “Terjual” saja tidak membuat saldo. Dana hanya tersedia setelah transaksi Rekening Bersama terkonfirmasi dan dilepas.
           </p>
         </div>
+        {user ? <SellerWithdrawal /> : <Link href="/login?next=/tarik-dana" className="mt-6 inline-flex rounded-lg bg-loak-blue px-5 py-3 text-sm font-semibold text-white hover:bg-loak-blue-dark">Masuk untuk tarik dana</Link>}
       </div>
     </>
   );

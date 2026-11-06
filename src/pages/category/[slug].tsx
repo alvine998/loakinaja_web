@@ -2,9 +2,10 @@ import React, { useState, useEffect } from 'react';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
 import Link from 'next/link';
-import { Filter, ChevronDown } from 'lucide-react';
-import { getListings, Listing } from '@/lib/db';
+import { Filter, ChevronDown, Heart } from 'lucide-react';
+import { addFavorite, getListings, getMyFavorites, Listing, removeFavorite } from '@/lib/db';
 import { getCategories } from '@/lib/categories';
+import { useAuth } from '@/context/AuthContext';
 
 interface FilterSectionProps {
   title: string;
@@ -32,6 +33,7 @@ const FilterSection: React.FC<FilterSectionProps> = ({ title, children, defaultO
 
 export default function CategoryPage() {
   const router = useRouter();
+  const { user } = useAuth();
   const { slug } = router.query;
 
   const categoryName = typeof slug === 'string' ? slug.charAt(0).toUpperCase() + slug.slice(1) : 'Kategori';
@@ -43,6 +45,8 @@ export default function CategoryPage() {
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState('');
   const [resolvedCategoryName, setResolvedCategoryName] = useState('');
+  const [favoriteIds, setFavoriteIds] = useState<Set<string>>(new Set());
+  const [favoriteBusyIds, setFavoriteBusyIds] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     if (!router.isReady) return;
@@ -70,6 +74,16 @@ export default function CategoryPage() {
     };
   }, [filtersOpen]);
 
+  useEffect(() => {
+    if (!user) {
+      setFavoriteIds(new Set());
+      return;
+    }
+    getMyFavorites()
+      .then((favorites) => setFavoriteIds(new Set(favorites.map((listing) => listing.id))))
+      .catch(() => setFavoriteIds(new Set()));
+  }, [user]);
+
   const locations = ['Jabodetabek', 'Bandung', 'Surabaya', 'Semarang'];
 
   const sortedProducts = [...products].sort((a, b) => {
@@ -77,6 +91,33 @@ export default function CategoryPage() {
     if (sortBy === 'termahal') return b.price - a.price;
     return Date.parse(b.createdAt) - Date.parse(a.createdAt);
   });
+
+  const toggleFavorite = async (listing: Listing) => {
+    if (!user) {
+      await router.push(`/login?next=${encodeURIComponent(router.asPath)}`);
+      return;
+    }
+    const wasFavorite = favoriteIds.has(listing.id);
+    setFavoriteBusyIds((current) => new Set(current).add(listing.id));
+    try {
+      if (wasFavorite) await removeFavorite(listing.id);
+      else await addFavorite(listing.id);
+      setFavoriteIds((current) => {
+        const next = new Set(current);
+        if (wasFavorite) next.delete(listing.id);
+        else next.add(listing.id);
+        return next;
+      });
+    } catch (reason) {
+      setLoadError((reason as Error).message);
+    } finally {
+      setFavoriteBusyIds((current) => {
+        const next = new Set(current);
+        next.delete(listing.id);
+        return next;
+      });
+    }
+  };
 
   const sortOptions: { value: string; label: string }[] = [
     { value: 'terbaru', label: 'Terbaru' },
@@ -205,9 +246,12 @@ export default function CategoryPage() {
             {sortedProducts.map((product) => (
               <Link href={`/product/${product.id}`} key={product.id}>
                 <div className="bg-white border border-gray-100 rounded-xl overflow-hidden hover:shadow-lg transition-all h-full flex flex-col group">
+                  <div className="relative">
                   <div className="relative h-48 w-full bg-gray-100 overflow-hidden">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img src={product.images?.[0] || `https://placehold.co/400x300/E2E8F0/1E293B?text=${encodeURIComponent(product.category)}`} alt={product.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                  </div>
+                  <button type="button" onClick={(event) => { event.preventDefault(); event.stopPropagation(); void toggleFavorite(product); }} disabled={favoriteBusyIds.has(product.id)} aria-label={favoriteIds.has(product.id) ? 'Hapus dari favorit' : 'Tambah ke favorit'} aria-pressed={favoriteIds.has(product.id)} className={`absolute right-2 top-2 rounded-full bg-white p-2 shadow transition-colors disabled:opacity-50 ${favoriteIds.has(product.id) ? 'text-red-500' : 'text-gray-500 hover:text-red-500'}`}><Heart className={`h-4 w-4 ${favoriteIds.has(product.id) ? 'fill-current' : ''}`} /></button>
                   </div>
                   <div className="p-4 flex flex-col flex-grow">
                     <h3 className="text-sm text-gray-800 line-clamp-2 mb-2 font-medium">{product.title}</h3>

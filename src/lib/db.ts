@@ -53,6 +53,37 @@ export interface ListingInput {
   imageFiles?: File[];
 }
 
+export interface EscrowSale {
+  id: string;
+  listingId: string;
+  buyerId: string;
+  sellerId: string;
+  amount: number;
+  status: 'awaiting_payment' | 'payment_submitted' | 'in_escrow' | 'released' | 'cancelled';
+  escrowBankName: string;
+  escrowAccountNumber: string;
+  escrowAccountHolder: string;
+  createdAt: string;
+  paidAt?: string | null;
+  releasedAt?: string | null;
+  listing?: Pick<Listing, 'id' | 'title' | 'images' | 'price'>;
+  buyer?: { id: string; name: string };
+  seller?: { id: string; name: string };
+}
+
+export interface Withdrawal {
+  id: string;
+  userId: string;
+  amount: number;
+  bankName: string;
+  accountNumber: string;
+  accountHolder: string;
+  status: 'pending' | 'paid' | 'rejected';
+  processedAt?: string | null;
+  adminNote?: string | null;
+  createdAt: string;
+}
+
 export interface TokenPackage {
   id: string;
   tokens: number;
@@ -517,6 +548,58 @@ export async function updateListing(
     method: 'PATCH',
     body: JSON.stringify(input),
   });
+  return result.data;
+}
+
+export async function getMyFavorites(): Promise<Listing[]> {
+  const result = await apiRequest<{ data: Listing[] }>('/favorites');
+  return result.data;
+}
+
+export async function getFavoriteStatus(listingId: string): Promise<boolean> {
+  const result = await apiRequest<{ favorited: boolean }>(`/favorites/${encodeURIComponent(listingId)}`);
+  return result.favorited;
+}
+
+export async function addFavorite(listingId: string): Promise<void> {
+  await apiRequest(`/favorites/${encodeURIComponent(listingId)}`, { method: 'POST' });
+}
+
+export async function removeFavorite(listingId: string): Promise<void> {
+  await apiRequest<void>(`/favorites/${encodeURIComponent(listingId)}`, { method: 'DELETE' });
+}
+
+export async function createEscrowSale(listingId: string): Promise<EscrowSale> {
+  const result = await apiRequest<{ data: EscrowSale }>('/escrow-sales', { method: 'POST', body: JSON.stringify({ listingId }) });
+  return result.data;
+}
+
+export async function getEscrowSale(saleId: string): Promise<EscrowSale> {
+  const result = await apiRequest<{ data: EscrowSale }>(`/escrow-sales/${encodeURIComponent(saleId)}`);
+  return result.data;
+}
+
+export async function getMyEscrowSales(): Promise<EscrowSale[]> {
+  const result = await apiRequest<{ data: EscrowSale[] }>('/escrow-sales');
+  return result.data;
+}
+
+export async function confirmEscrowDelivery(saleId: string): Promise<EscrowSale> {
+  const result = await apiRequest<{ data: EscrowSale }>(`/escrow-sales/${encodeURIComponent(saleId)}/confirm-delivery`, { method: 'POST' });
+  return result.data;
+}
+
+export async function submitEscrowPayment(saleId: string): Promise<EscrowSale> {
+  const result = await apiRequest<{ data: EscrowSale }>(`/escrow-sales/${encodeURIComponent(saleId)}/submit-payment`, { method: 'POST' });
+  return result.data;
+}
+
+export async function getSellerBalance(): Promise<{ availableAmount: number; minimumAmount: number; data: Withdrawal[] }> {
+  return apiRequest('/withdrawals');
+}
+
+export async function requestSellerWithdrawal(input: Pick<Withdrawal, 'amount' | 'bankName' | 'accountNumber' | 'accountHolder'>): Promise<Withdrawal> {
+  const result = await apiRequest<{ data: Withdrawal }>('/withdrawals', { method: 'POST', body: JSON.stringify(input) });
   return result.data;
 }
 

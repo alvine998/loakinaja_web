@@ -22,6 +22,7 @@ import {
 import { useAuth } from '@/context/AuthContext';
 import { formatThousandsInput, parseThousandsInput } from '@/lib/format';
 import LocationSelector from '@/components/LocationSelector';
+import SellerWithdrawal from '@/components/SellerWithdrawal';
 import { getCategories, type Category } from '@/lib/categories';
 import {
   CONDITIONS,
@@ -320,6 +321,8 @@ export default function DashboardPenjual() {
             value={formatRupiah(stats.value)}
           />
         </div>
+
+        <SellerWithdrawal />
 
         <div className="mt-10">
           <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
