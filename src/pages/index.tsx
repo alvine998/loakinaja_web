@@ -259,18 +259,17 @@ export default function Home() {
           </div>
         </section>
 
-        <section aria-label="Informasi LoakinAja" className="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm sm:p-8">
-          <h2 className="text-xl font-bold text-gray-900">Tentang LoakinAja</h2>
-          <p className="mt-2 max-w-3xl text-sm leading-6 text-gray-600">LoakinAja adalah marketplace Indonesia untuk jual beli barang bekas berkualitas. Pengguna dapat menjelajahi produk berdasarkan kategori, lokasi, harga, dan kondisi. Transaksi Rekening Bersama diverifikasi manual oleh administrator.</p>
-          <p className="mt-3 text-sm text-gray-600">Paket penjual mulai dari {TOKEN_PACKAGES[0]?.tokens} token seharga Rp {TOKEN_PACKAGES[0]?.price.toLocaleString('id-ID')} (Rp {PRICE_PER_TOKEN.toLocaleString('id-ID')} per token). <Link href="/harga" className="font-semibold text-loak-blue underline">Lihat semua harga</Link>.</p>
-          <nav aria-label="Tentang dan kebijakan" className="mt-4 flex flex-wrap gap-x-5 gap-y-2 text-sm font-medium">
+        <section aria-label="Informasi LoakinAja" className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm sm:p-6">
+          <h2 className="text-lg font-bold text-gray-900">Tentang LoakinAja</h2>
+          <p className="mt-2 max-w-3xl text-sm leading-6 text-gray-600">Marketplace Indonesia untuk jual beli barang bekas berkualitas dengan Rekening Bersama.</p>
+          <p className="mt-2 text-sm text-gray-600">Paket penjual mulai dari {TOKEN_PACKAGES[0]?.tokens} token seharga Rp {TOKEN_PACKAGES[0]?.price.toLocaleString('id-ID')}. <Link href="/harga" className="font-semibold text-loak-blue underline">Lihat harga</Link>.</p>
+          <nav aria-label="Informasi perusahaan dan legal" className="mt-3 flex flex-wrap gap-x-4 gap-y-2 text-sm font-medium">
             <Link href="/tentang-kami" className="text-loak-blue underline">Tentang kami</Link>
             <Link href="/hubungi-kami" className="text-loak-blue underline">Kontak</Link>
             <Link href="/syarat-ketentuan" className="text-loak-blue underline">Syarat dan Ketentuan</Link>
             <Link href="/kebijakan-privasi" className="text-loak-blue underline">Kebijakan Privasi</Link>
-            <a href="mailto:support@loakinaja.com" className="text-loak-blue underline">support@loakinaja.com</a>
-            <a href="tel:+6281234567890" className="text-loak-blue underline">+62 812-3456-7890</a>
           </nav>
+          <p className="mt-2 text-sm"><a href="mailto:support@loakinaja.com" className="text-loak-blue underline">support@loakinaja.com</a> · <a href="tel:+6281234567890" className="text-loak-blue underline">+62 812-3456-7890</a></p>
         </section>
 
         {/* CTA Section */}
