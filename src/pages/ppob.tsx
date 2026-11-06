@@ -1,8 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
-import { useRouter } from 'next/router';
-import { AlertCircle, ArrowRight, Clock3, Loader2, Search, Smartphone, Zap } from 'lucide-react';
+import { AlertCircle, ArrowLeft, ArrowRight, Clock3, Droplets, HeartPulse, Loader2, Search, Smartphone, Tv, Wifi, Zap } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { createPpobQuote, getMyPpobOrders, getPpobProducts, PpobOrder, PpobProduct, PpobType, startPpobPayment } from '@/lib/db';
 import { formatRupiah } from '@/lib/format';
@@ -12,14 +11,23 @@ const statusLabels: Record<string, string> = {
   processing: 'Sedang diproses', pending: 'Diproses provider', success: 'Berhasil', failed: 'Gagal', expired: 'Kedaluwarsa',
 };
 
+const services = [
+  { id: 'water', label: 'Air / PDAM', description: 'Cek dan bayar tagihan air', type: 'postpaid' as const, keywords: ['pdam', 'air'], icon: Droplets, tone: 'bg-cyan-50 text-cyan-700' },
+  { id: 'electricity-bill', label: 'Listrik Tagihan', description: 'Tagihan listrik pascabayar', type: 'postpaid' as const, keywords: ['pln'], icon: Zap, tone: 'bg-amber-50 text-amber-700' },
+  { id: 'electricity-token', label: 'Listrik Non-Taglis', description: 'Token listrik prabayar', type: 'prepaid' as const, keywords: ['pln', 'token'], icon: Zap, tone: 'bg-yellow-50 text-yellow-700' },
+  { id: 'prepaid-mobile', label: 'Pulsa Prabayar', description: 'Isi pulsa semua operator', type: 'prepaid' as const, keywords: ['pulsa'], icon: Smartphone, tone: 'bg-blue-50 text-blue-700' },
+  { id: 'postpaid-mobile', label: 'Pulsa Pascabayar', description: 'Bayar tagihan seluler', type: 'postpaid' as const, keywords: ['pascabayar', 'pulsa'], icon: Smartphone, tone: 'bg-indigo-50 text-indigo-700' },
+  { id: 'data', label: 'Paket Data', description: 'Internet untuk nomor seluler', type: 'prepaid' as const, keywords: ['data', 'internet'], icon: Wifi, tone: 'bg-violet-50 text-violet-700' },
+  { id: 'internet', label: 'Internet & TV', description: 'WiFi, telepon, dan TV kabel', type: 'postpaid' as const, keywords: ['internet', 'wifi', 'telkom', 'indihome'], icon: Tv, tone: 'bg-purple-50 text-purple-700' },
+  { id: 'bpjs', label: 'BPJS', description: 'Bayar iuran BPJS kesehatan', type: 'postpaid' as const, keywords: ['bpjs'], icon: HeartPulse, tone: 'bg-rose-50 text-rose-700' },
+];
+
 export default function PpobPage() {
-  const router = useRouter();
   const { user, loading: authLoading } = useAuth();
   const [guest, setGuest] = useState(true);
   const [authResolved, setAuthResolved] = useState(false);
   const [type, setType] = useState<PpobType>('prepaid');
-  const [products, setProducts] = useState<PpobProduct[]>([]);
-  const [categories, setCategories] = useState<string[]>([]);
+  const [selectedServiceId, setSelectedServiceId] = useState<string | null>(null);
   const [productCode, setProductCode] = useState('');
   const [customerNo, setCustomerNo] = useState('');
   const [buyerName, setBuyerName] = useState('');
@@ -27,13 +35,16 @@ export default function PpobPage() {
   const [buyerPhone, setBuyerPhone] = useState('');
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
+  const [serviceProducts, setServiceProducts] = useState<PpobProduct[]>([]);
   const [category, setCategory] = useState('');
   const [orders, setOrders] = useState<PpobOrder[]>([]);
   const [quote, setQuote] = useState<PpobOrder | null>(null);
   const [error, setError] = useState('');
   const [loadingCatalog, setLoadingCatalog] = useState(false);
+  const [catalogRefreshing, setCatalogRefreshing] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [guestToken, setGuestToken] = useState<string | null>(null);
+  const selectedService = services.find((service) => service.id === selectedServiceId) || null;
 
   useEffect(() => {
     if (authLoading) return;
@@ -47,26 +58,75 @@ export default function PpobPage() {
   }, [search]);
 
   useEffect(() => {
-    if (!authResolved) return;
+    if (!authResolved || !selectedService) return;
     let active = true;
     setLoadingCatalog(true);
-    getPpobProducts(type, debouncedSearch, category)
-      .then((result) => {
+    const loadCatalog = async () => {
+      try {
+        const result = await getPpobProducts(type);
         if (!active) return;
-        setProducts(result.data);
-        setCategories(result.categories);
-      })
-      .catch((catalogError) => active && setError((catalogError as Error).message))
-      .finally(() => active && setLoadingCatalog(false));
+        setServiceProducts(result.data);
+        setCatalogRefreshing(Boolean(result.refreshing));
+        if (result.refreshing) {
+          window.setTimeout(() => { if (active) void loadCatalog(); }, Math.max(2, result.retryAfterSeconds || 3) * 1000);
+        }
+      } catch (catalogError) {
+        if (!active) return;
+        setCatalogRefreshing(false);
+        setError((catalogError as Error).message);
+      } finally {
+        if (active) setLoadingCatalog(false);
+      }
+    };
+    void loadCatalog();
     return () => { active = false; };
-  }, [authResolved, type, debouncedSearch, category]);
+  }, [authResolved, selectedServiceId, type]);
 
   useEffect(() => {
     if (!authResolved || guest) return;
     getMyPpobOrders().then(setOrders).catch(() => undefined);
   }, [authResolved, guest]);
 
+  const products = useMemo(() => {
+    if (!selectedService) return [];
+    const keywordMatches = (product: PpobProduct) => {
+      const text = `${product.name} ${product.category} ${product.brand} ${product.code}`.toLowerCase();
+      return selectedService.keywords.some((keyword) => text.includes(keyword));
+    };
+    return serviceProducts.filter((product) => keywordMatches(product)
+      && (!category || product.category === category)
+      && (!debouncedSearch || `${product.name} ${product.category} ${product.brand} ${product.code}`.toLowerCase().includes(debouncedSearch.toLowerCase())));
+  }, [category, debouncedSearch, selectedService, serviceProducts]);
+  const visibleCategories = useMemo(() => [...new Set(serviceProducts
+    .filter((product) => selectedService?.keywords.some((keyword) => `${product.name} ${product.category} ${product.brand} ${product.code}`.toLowerCase().includes(keyword)))
+    .map((product) => product.category).filter(Boolean))], [selectedService, serviceProducts]);
   const selected = useMemo(() => products.find((product) => product.code === productCode) || null, [products, productCode]);
+
+  const chooseService = (serviceId: string) => {
+    const service = services.find((item) => item.id === serviceId);
+    if (!service) return;
+    setSelectedServiceId(service.id);
+    setType(service.type);
+    setServiceProducts([]);
+    setProductCode('');
+    setCategory('');
+    setSearch('');
+    setDebouncedSearch('');
+    setCustomerNo('');
+    setQuote(null);
+    setError('');
+  };
+
+  const returnToServices = () => {
+    setSelectedServiceId(null);
+    setServiceProducts([]);
+    setProductCode('');
+    setCategory('');
+    setSearch('');
+    setCustomerNo('');
+    setQuote(null);
+    setError('');
+  };
 
   const handleQuote = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -123,30 +183,46 @@ export default function PpobPage() {
 
   return (
     <>
-      <Head><title>Pulsa &amp; Tagihan - LoakinAja</title></Head>
+      <Head><title>{selectedService ? `${selectedService.label} - PPOB LoakinAja` : 'Pulsa & Tagihan - LoakinAja'}</title></Head>
       <div className="mx-auto max-w-6xl">
-        <div className="mb-6 flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
+        <div className="mb-7 overflow-hidden rounded-3xl bg-gradient-to-br from-blue-800 via-blue-700 to-cyan-700 px-6 py-7 text-white shadow-lg sm:px-9 sm:py-9">
+          <div className="flex flex-col justify-between gap-5 sm:flex-row sm:items-end">
           <div>
-            <p className="text-sm font-semibold text-loak-blue">Layanan digital</p>
-            <h1 className="mt-1 text-2xl font-bold text-gray-900 sm:text-3xl">Pulsa &amp; Bayar Tagihan</h1>
-            <p className="mt-2 text-sm text-gray-500">Pulsa, paket data, listrik, air, telepon, BPJS, dan layanan PPOB lainnya.</p>
+            <p className="text-sm font-semibold text-cyan-100">Layanan digital LoakinAja</p>
+            <h1 className="mt-1 text-2xl font-extrabold sm:text-3xl">{selectedService ? selectedService.label : 'Semua kebutuhan, satu tempat'}</h1>
+            <p className="mt-2 max-w-xl text-sm text-blue-100">{selectedService ? selectedService.description : 'Pilih layanan untuk mulai membeli pulsa atau membayar tagihan dengan mudah.'}</p>
           </div>
           <div className="flex items-center gap-3">
-            {guest ? <Link href="/login?next=/ppob" className="text-sm font-semibold text-loak-blue hover:underline">Masuk</Link> : <span className="text-sm font-medium text-gray-500">Login aktif</span>}
+            {guest ? <Link href="/login?next=/ppob" className="rounded-lg border border-white/30 px-3 py-2 text-sm font-semibold text-white hover:bg-white/10">Masuk</Link> : <span className="text-sm font-medium text-blue-100">Login aktif</span>}
+          </div>
           </div>
         </div>
 
         {error && <div role="alert" className="mb-4 flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700"><AlertCircle className="h-5 w-5 shrink-0" />{error}</div>}
 
+        {!selectedService ? <>
+          <div className="mb-4 flex items-end justify-between gap-3"><div><h2 className="text-lg font-bold text-gray-900">Pilih jenis layanan</h2><p className="mt-1 text-sm text-gray-500">Layanan tersedia untuk prabayar maupun pascabayar.</p></div><span className="hidden rounded-full bg-blue-50 px-3 py-1.5 text-xs font-semibold text-loak-blue sm:inline-flex">{services.length} layanan</span></div>
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+            {services.map(({ id, label, description, icon: Icon, tone }) => (
+              <button key={id} type="button" onClick={() => chooseService(id)} className="group rounded-2xl border border-gray-100 bg-white p-4 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-loak-blue/30 hover:shadow-md sm:p-5">
+                <span className={`flex h-12 w-12 items-center justify-center rounded-2xl ${tone}`}><Icon className="h-6 w-6" /></span>
+                <span className="mt-4 flex items-center justify-between gap-2"><span className="text-sm font-bold text-gray-900 sm:text-base">{label}</span><ArrowRight className="h-4 w-4 shrink-0 text-gray-300 transition group-hover:translate-x-0.5 group-hover:text-loak-blue" /></span>
+                <span className="mt-1 block text-xs leading-relaxed text-gray-500">{description}</span>
+              </button>
+            ))}
+          </div>
+          <section className="mt-7 rounded-2xl border border-gray-100 bg-white p-5 shadow-sm sm:p-6">
+            <div className="flex items-center gap-3"><span className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-50 text-emerald-700"><Clock3 className="h-5 w-5" /></span><div><h2 className="text-sm font-bold text-gray-900">Transaksi terbaru</h2><p className="mt-0.5 text-xs text-gray-500">Pantau status pesanan PPOB Anda.</p></div></div>
+            <div className="mt-3 divide-y divide-gray-100">
+              {!guest && orders.length ? orders.slice(0, 5).map((order) => <Link key={order.id} href={`/ppob/order?id=${encodeURIComponent(order.id)}`} className="flex items-center justify-between gap-3 py-3 hover:bg-gray-50"><span className="min-w-0"><span className="block truncate text-sm font-medium text-gray-800">{order.productName}</span><span className="text-xs text-gray-400">{order.customerNo}</span></span><span className={`shrink-0 text-xs font-semibold ${order.status === 'success' ? 'text-green-600' : order.status === 'failed' ? 'text-red-600' : 'text-amber-600'}`}>{statusLabels[order.status] || order.status}</span></Link>) : <p className="py-3 text-sm text-gray-500">{guest ? 'Masuk untuk melihat riwayat transaksi Anda.' : 'Belum ada transaksi PPOB.'}</p>}
+            </div>
+          </section>
+        </> : <>
+        <button type="button" onClick={returnToServices} className="mb-4 inline-flex items-center gap-2 rounded-lg px-2 py-2 text-sm font-semibold text-gray-500 hover:bg-gray-100 hover:text-gray-900"><ArrowLeft className="h-4 w-4" />Semua layanan</button>
+
         <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px]">
           <section className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm sm:p-6">
-            <div className="mb-5 grid grid-cols-2 gap-2 rounded-xl bg-gray-100 p-1">
-              {(['prepaid', 'postpaid'] as const).map((item) => (
-                <button key={item} type="button" onClick={() => { setType(item); setQuote(null); setProductCode(''); setCategory(''); }} className={`rounded-lg px-4 py-2.5 text-sm font-semibold transition-colors ${type === item ? 'bg-white text-loak-blue shadow-sm' : 'text-gray-500 hover:text-gray-800'}`}>
-                  {item === 'prepaid' ? 'Pulsa & Paket Data' : 'Pascabayar'}
-                </button>
-              ))}
-            </div>
+            <div className="mb-5 flex items-center justify-between rounded-xl bg-blue-50 px-4 py-3"><div><p className="text-sm font-bold text-gray-900">{selectedService.label}</p><p className="mt-0.5 text-xs text-gray-500">{type === 'prepaid' ? 'Layanan prabayar' : 'Layanan pascabayar'}</p></div><span className="rounded-full bg-white px-3 py-1 text-xs font-semibold text-loak-blue">{products.length} produk</span></div>
 
             <label className="mb-4 block text-sm font-semibold text-gray-700" htmlFor="ppob-customer">
               {type === 'prepaid' ? 'Nomor tujuan' : 'Nomor pelanggan'}
@@ -171,11 +247,11 @@ export default function PpobPage() {
               </label>
               <select value={category} onChange={(event) => { setCategory(event.target.value); setProductCode(''); }} className="rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm outline-none focus:border-loak-blue">
                 <option value="">Semua kategori</option>
-                {categories.map((item) => <option key={item} value={item}>{item}</option>)}
+                {visibleCategories.map((item) => <option key={item} value={item}>{item}</option>)}
               </select>
             </div>
 
-            {loadingCatalog ? <p className="py-10 text-center text-sm text-gray-500">Memuat katalog Digiflazz...</p> : products.length ? (
+            {loadingCatalog ? <p className="py-10 text-center text-sm text-gray-500">Memuat katalog Digiflazz...</p> : catalogRefreshing && products.length === 0 ? <div className="rounded-xl border border-blue-100 bg-blue-50 px-4 py-8 text-center"><p className="text-sm font-semibold text-blue-800">Katalog sedang diperbarui</p><p className="mt-1 text-xs text-blue-600">Produk akan muncul otomatis setelah katalog selesai dimuat.</p></div> : products.length ? (
               <div className="grid max-h-[440px] grid-cols-1 gap-2 overflow-y-auto pr-1 sm:grid-cols-2">
                 {products.map((product) => (
                   <button key={product.code} type="button" onClick={() => { setProductCode(product.code); setQuote(null); }} className={`rounded-xl border p-3 text-left transition-colors ${productCode === product.code ? 'border-loak-blue bg-loak-light ring-1 ring-loak-blue' : 'border-gray-100 hover:border-loak-blue/40 hover:bg-gray-50'}`}>
@@ -232,6 +308,7 @@ export default function PpobPage() {
             </section>
           </aside>
         </div>
+        </>}
       </div>
     </>
   );

@@ -6,6 +6,7 @@ export interface User {
   name: string;
   email: string;
   phone: string;
+  profilePhoto?: string | null;
   password: string;
   tokens: number;
   createdAt: string;
@@ -251,6 +252,16 @@ export async function updateProfile(input: {
   return result.user;
 }
 
+export async function updateProfilePhoto(file: File): Promise<Omit<User, 'password'>> {
+  const body = new FormData();
+  body.set('photo', file);
+  const result = await apiRequest<{ user: Omit<User, 'password'> }>('/auth/me/photo', {
+    method: 'PATCH',
+    body,
+  });
+  return result.user;
+}
+
 export async function changePassword(
   currentPassword: string,
   newPassword: string
@@ -434,7 +445,7 @@ export async function verifyTokenOrder(orderId: string): Promise<TokenOrder> {
 
 // ---------- PPOB (Digiflazz) ----------
 
-export async function getPpobProducts(type: PpobType, search = '', category = ''): Promise<{ data: PpobProduct[]; categories: string[] }> {
+export async function getPpobProducts(type: PpobType, search = '', category = ''): Promise<{ data: PpobProduct[]; categories: string[]; refreshing?: boolean; retryAfterSeconds?: number }> {
   const params = new URLSearchParams({ type });
   if (search) params.set('search', search);
   if (category) params.set('category', category);

@@ -101,6 +101,7 @@ const Navbar = () => {
                     title="Dashboard Penjual"
                     className="flex items-center gap-1.5 text-sm text-gray-600 transition-colors hover:text-loak-blue"
                   >
+                    {user.profilePhoto ? <img src={user.profilePhoto} alt="" className="h-7 w-7 rounded-full object-cover" /> : <span className="flex h-7 w-7 items-center justify-center rounded-full bg-loak-light text-xs font-bold text-loak-blue">{user.name.charAt(0).toUpperCase()}</span>}
                     <LayoutDashboard className="h-4 w-4 shrink-0" />
                     <span className="max-w-[110px] truncate">{user.name}</span>
                   </Link>
@@ -194,9 +195,12 @@ const Navbar = () => {
             {user ? (
               <div className="space-y-3">
                 <div className="flex items-center justify-between rounded-xl bg-loak-light px-4 py-3">
-                  <div className="min-w-0">
+                  <div className="flex min-w-0 items-center gap-3">
+                    {user.profilePhoto ? <img src={user.profilePhoto} alt="" className="h-10 w-10 shrink-0 rounded-full object-cover" /> : <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white text-sm font-bold text-loak-blue">{user.name.charAt(0).toUpperCase()}</span>}
+                    <div className="min-w-0">
                     <p className="text-sm font-semibold text-gray-800 truncate">{user.name}</p>
                     <p className="text-xs text-gray-500 truncate">{user.email}</p>
+                    </div>
                   </div>
                   <div className="inline-flex items-center gap-1.5 text-sm font-semibold text-loak-blue-dark">
                     <Coins className="h-4 w-4" />

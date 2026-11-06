@@ -17,6 +17,7 @@ type PublicUser = {
   name: string;
   email: string;
   phone: string;
+  profilePhoto?: string | null;
   tokens: number;
   createdAt: string;
   referralCode?: string;

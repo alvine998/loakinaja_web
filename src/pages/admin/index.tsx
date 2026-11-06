@@ -43,7 +43,7 @@ type AdminAccount = { id: string; email: string; role: AdminRoleKey; createdAt: 
 type AdminData = { users: AdminUser[]; listings: AdminListing[]; orders: AdminOrder[] };
 type EscrowAccount = { id: string; bankName: string; accountNumber: string; accountHolder: string; isActive: boolean; createdAt: string };
 type EscrowAccountForm = Pick<EscrowAccount, 'bankName' | 'accountNumber' | 'accountHolder' | 'isActive'>;
-type Section = 'overview' | 'users' | 'listings' | 'orders' | 'referrals' | 'escrow' | 'finance' | 'admins' | 'profile';
+type Section = 'overview' | 'users' | 'listings' | 'orders' | 'referrals' | 'escrow' | 'finance' | 'ppob' | 'admins' | 'profile';
 
 const SECTION_SLUGS: Record<Section, string> = {
   overview: 'overview',
@@ -53,6 +53,7 @@ const SECTION_SLUGS: Record<Section, string> = {
   orders: 'transactions',
   escrow: 'escrow',
   finance: 'finance',
+  ppob: 'harga-ppob',
   admins: 'administrators',
   profile: 'profile',
 };
@@ -65,6 +66,7 @@ const SECTION_PERMISSIONS: Partial<Record<Section, string>> = {
   listings: 'listings:view',
   orders: 'transactions:view',
   finance: 'finance:view',
+  ppob: 'ppob:manage',
   escrow: 'escrow:manage',
   admins: 'admins:manage',
   profile: 'profile:manage',
@@ -77,6 +79,7 @@ const NAV_ITEMS: { id: Section; label: string; icon: typeof LayoutDashboard }[] 
   { id: 'listings', label: 'Listing', icon: ShoppingBag },
   { id: 'orders', label: 'Transaksi', icon: CircleDollarSign },
   { id: 'finance', label: 'Keuangan', icon: Wallet },
+  { id: 'ppob', label: 'Harga PPOB', icon: Coins },
   { id: 'escrow', label: 'Rekening Bersama', icon: CreditCard },
   { id: 'admins', label: 'Admin', icon: UserCog },
   { id: 'profile', label: 'Pengaturan profil', icon: Settings },
@@ -233,6 +236,9 @@ export default function AdminDashboard() {
   const [escrowForm, setEscrowForm] = useState<EscrowAccountForm>({ bankName: '', accountNumber: '', accountHolder: '', isActive: true });
   const [editingEscrowId, setEditingEscrowId] = useState<string | null>(null);
   const [savingEscrow, setSavingEscrow] = useState(false);
+  const [ppobMarkup, setPpobMarkup] = useState(1000);
+  const [ppobMarkupForm, setPpobMarkupForm] = useState('1000');
+  const [savingPpobMarkup, setSavingPpobMarkup] = useState(false);
   const [selectedListingIds, setSelectedListingIds] = useState<Set<string>>(new Set());
   const [bulkReviewing, setBulkReviewing] = useState(false);
   const [admins, setAdmins] = useState<AdminAccount[]>([]);
@@ -261,7 +267,7 @@ export default function AdminDashboard() {
     setPermissions(session.admin.permissions);
     setCurrentAdminId(session.admin.id);
     setCurrentAdminRole(session.admin.role);
-    const [response, escrowResponse, adminsResponse] = await Promise.all([
+    const [response, escrowResponse, adminsResponse, ppobSettingsResponse] = await Promise.all([
       adminRequest<{ data: AdminData }>('/admin/dashboard'),
       session.admin.permissions.includes('escrow:manage')
         ? adminRequest<{ data: EscrowAccount[] }>('/admin/escrow-accounts')
@@ -269,12 +275,17 @@ export default function AdminDashboard() {
       session.admin.permissions.includes('admins:manage')
         ? adminRequest<{ data: AdminAccount[]; roles: AdminRole[]; permissions: string[] }>('/admin/admins')
         : Promise.resolve({ data: [] as AdminAccount[], roles: [] as AdminRole[], permissions: [] as string[] }),
+      session.admin.permissions.includes('ppob:manage')
+        ? adminRequest<{ data: { markupRupiah: number } }>('/admin/ppob-settings')
+        : Promise.resolve({ data: { markupRupiah: 1000 } }),
     ]);
     setData(response.data);
     setEscrowAccounts(escrowResponse.data);
     setAdmins(adminsResponse.data);
     setAvailableRoles(adminsResponse.roles);
     setAvailablePermissions(adminsResponse.permissions);
+    setPpobMarkup(ppobSettingsResponse.data.markupRupiah);
+    setPpobMarkupForm(String(ppobSettingsResponse.data.markupRupiah));
     setProfileForm((current) => ({ ...current, email: session.admin.email }));
     setLoading(false);
   }, [router]);
@@ -669,6 +680,26 @@ export default function AdminDashboard() {
     }
   };
 
+  const savePpobMarkup = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setSavingPpobMarkup(true);
+    setError('');
+    setNotice('');
+    try {
+      const response = await adminRequest<{ data: { markupRupiah: number } }>('/admin/ppob-settings', {
+        method: 'PATCH',
+        body: JSON.stringify({ markupRupiah: Number(ppobMarkupForm) }),
+      });
+      setPpobMarkup(response.data.markupRupiah);
+      setPpobMarkupForm(String(response.data.markupRupiah));
+      setNotice('Markup harga PPOB berhasil disimpan.');
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setSavingPpobMarkup(false);
+    }
+  };
+
   const heading = NAV_ITEMS.find((item) => item.id === section)?.label || 'Overview';
   const visibleNavItems = NAV_ITEMS.filter((item) => !SECTION_PERMISSIONS[item.id] || permissions.includes(SECTION_PERMISSIONS[item.id]!));
 
@@ -730,6 +761,14 @@ export default function AdminDashboard() {
                 </div>
 
                 <section className="mt-5 overflow-hidden rounded-2xl border border-slate-200 bg-white"><div className="flex items-center justify-between border-b border-slate-100 px-5 py-4"><div><h3 className="text-sm font-bold">Transaksi terbaru</h3><p className="mt-0.5 text-xs text-slate-400">Pesanan pembelian token</p></div><button onClick={() => selectSection('orders')} className="text-xs font-semibold text-blue-700 hover:text-blue-800">Lihat transaksi <ArrowUpRight className="ml-1 inline h-3.5 w-3.5" /></button></div><div className="overflow-x-auto"><table className="w-full min-w-[600px] text-left text-xs"><thead className="bg-slate-50 text-slate-400"><tr><th className="px-5 py-3 font-semibold">PESANAN</th><th className="px-5 py-3 font-semibold">PAKET</th><th className="px-5 py-3 font-semibold">TANGGAL</th><th className="px-5 py-3 font-semibold">STATUS</th><th className="px-5 py-3 text-right font-semibold">NOMINAL</th></tr></thead><tbody className="divide-y divide-slate-100">{[...data.orders].sort((a, b) => b.createdAt.localeCompare(a.createdAt)).slice(0, 4).map((order) => <tr key={order.id}><td className="px-5 py-3.5 font-semibold text-slate-700">#{order.id.slice(-8)}</td><td className="px-5 py-3.5 text-slate-500">{order.packageLabel}</td><td className="px-5 py-3.5 text-slate-500">{formatDate(order.createdAt)}</td><td className="px-5 py-3.5"><StatusPill status={order.status} /></td><td className="px-5 py-3.5 text-right font-semibold text-slate-700">{rupiah(order.amount)}</td></tr>)}</tbody></table>{data.orders.length === 0 && <p className="px-5 py-8 text-center text-sm text-slate-400">Belum ada transaksi.</p>}</div></section>
+              </> : section === 'ppob' ? <>
+                <div className="mb-6"><h2 className="text-xl font-bold tracking-tight">Markup harga PPOB</h2><p className="mt-1 text-sm text-slate-500">Atur tambahan harga yang diterapkan pada produk Digiflazz untuk pelanggan.</p></div>
+                <form onSubmit={savePpobMarkup} className="max-w-2xl rounded-2xl border border-slate-200 bg-white p-5 sm:p-7">
+                  <div className="mb-6 flex items-center gap-3"><span className="flex h-11 w-11 items-center justify-center rounded-xl bg-amber-50 text-amber-700"><Coins className="h-5 w-5" /></span><div><h3 className="text-sm font-bold">Markup tetap per transaksi</h3><p className="mt-0.5 text-xs text-slate-400">Nilai ini ditambahkan ke harga Digiflazz dan biaya admin provider, jika ada.</p></div></div>
+                  <label className="block text-xs font-semibold text-slate-600">Markup (Rupiah)<input type="number" min="0" max="10000000" step="1" required value={ppobMarkupForm} onChange={(event) => setPpobMarkupForm(event.target.value)} className="mt-1.5 w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm font-normal outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-50" /></label>
+                  <p className="mt-2 text-xs text-slate-400">Markup saat ini: <span className="font-semibold text-slate-600">{rupiah(ppobMarkup)}</span>. Perubahan berlaku pada katalog dan quote baru.</p>
+                  <button type="submit" disabled={savingPpobMarkup || ppobMarkupForm === ''} className="mt-5 inline-flex min-h-10 items-center justify-center gap-2 rounded-xl bg-blue-700 px-4 py-2 text-sm font-semibold text-white transition hover:bg-blue-800 disabled:opacity-60"><Check className="h-4 w-4" />{savingPpobMarkup ? 'Menyimpan...' : 'Simpan markup'}</button>
+                </form>
               </> : section === 'finance' ? <>
                 <div className="mb-6 flex flex-col justify-between gap-3 sm:flex-row sm:items-end"><div><h2 className="text-xl font-bold tracking-tight">Ringkasan keuangan</h2><p className="mt-1 text-sm text-slate-500">Pantau penerimaan dari pembelian token dan status pembayaran.</p></div><button type="button" onClick={() => selectSection('orders')} className="inline-flex w-fit items-center gap-2 rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-xs font-semibold text-slate-600 hover:bg-slate-50">Lihat semua transaksi<ArrowUpRight className="h-3.5 w-3.5" /></button></div>
                 <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">

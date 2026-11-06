@@ -5,6 +5,7 @@ import { useRouter } from 'next/router';
 import {
   AlertCircle,
   Calendar,
+  Camera,
   CheckCircle2,
   Coins,
   Copy,
@@ -21,7 +22,7 @@ import {
   UserCog,
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
-import { changePassword, getMyReferralCount, updateProfile } from '@/lib/db';
+import { changePassword, getMyReferralCount, updateProfile, updateProfilePhoto } from '@/lib/db';
 
 const formatDate = (iso: string) =>
   new Date(iso).toLocaleDateString('id-ID', {
@@ -38,6 +39,8 @@ export default function PengaturanProfil() {
   const [profileError, setProfileError] = useState('');
   const [profileNotice, setProfileNotice] = useState('');
   const [savingProfile, setSavingProfile] = useState(false);
+  const [profilePhotoFile, setProfilePhotoFile] = useState<File | null>(null);
+  const [profilePhotoPreview, setProfilePhotoPreview] = useState('');
 
   const [passwordForm, setPasswordForm] = useState({
     current: '',
@@ -63,6 +66,16 @@ export default function PengaturanProfil() {
   }, [user]);
 
   useEffect(() => {
+    if (!profilePhotoFile) {
+      setProfilePhotoPreview('');
+      return;
+    }
+    const preview = URL.createObjectURL(profilePhotoFile);
+    setProfilePhotoPreview(preview);
+    return () => URL.revokeObjectURL(preview);
+  }, [profilePhotoFile]);
+
+  useEffect(() => {
     if (!user) return;
     getMyReferralCount().then(setReferralCount).catch(() => setReferralCount(0));
   }, [user]);
@@ -83,9 +96,27 @@ export default function PengaturanProfil() {
     return (
       profileForm.name !== user.name ||
       profileForm.email !== user.email ||
-      profileForm.phone !== user.phone
+      profileForm.phone !== user.phone ||
+      profilePhotoFile !== null
     );
-  }, [profileForm, user]);
+  }, [profileForm, profilePhotoFile, user]);
+
+  const handleProfilePhotoSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
+      setProfileError('Foto harus berformat JPEG, PNG, atau WebP.');
+      event.target.value = '';
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      setProfileError('Ukuran foto maksimal 5 MB.');
+      event.target.value = '';
+      return;
+    }
+    setProfileError('');
+    setProfilePhotoFile(file);
+  };
 
   const handleProfileSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -94,7 +125,11 @@ export default function PengaturanProfil() {
     setSavingProfile(true);
     try {
       // Sync from the saved record so trimmed values don't leave the form "dirty".
-      const saved = await updateProfile(profileForm);
+      let saved = await updateProfile(profileForm);
+      if (profilePhotoFile) {
+        saved = await updateProfilePhoto(profilePhotoFile);
+        setProfilePhotoFile(null);
+      }
       setProfileForm({ name: saved.name, email: saved.email, phone: saved.phone });
       await refresh();
       setProfileNotice('Profil berhasil diperbarui.');
@@ -136,6 +171,7 @@ export default function PengaturanProfil() {
   }
 
   const initial = user.name.charAt(0).toUpperCase();
+  const displayedPhoto = profilePhotoPreview || user.profilePhoto;
   const passwordInputType = showPasswords ? 'text' : 'password';
 
   return (
@@ -182,6 +218,21 @@ export default function PengaturanProfil() {
               )}
 
               <form className="space-y-5" onSubmit={handleProfileSubmit}>
+                <div className="flex flex-col gap-4 rounded-xl border border-gray-100 bg-gray-50 p-4 sm:flex-row sm:items-center">
+                  <div className="flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-full bg-loak-light text-2xl font-bold text-loak-blue">
+                    {displayedPhoto ? <img src={displayedPhoto} alt="Foto profil" className="h-full w-full object-cover" /> : initial}
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold text-gray-800">Foto Profil</p>
+                    <p className="mt-1 text-xs text-gray-500">Gunakan foto JPEG, PNG, atau WebP (maksimal 5 MB).</p>
+                    <label className="mt-3 inline-flex cursor-pointer items-center gap-2 rounded-lg border border-gray-300 bg-white px-3 py-2 text-xs font-semibold text-gray-700 transition-colors hover:border-loak-blue hover:text-loak-blue">
+                      <Camera className="h-4 w-4" /> Pilih Foto
+                      <input type="file" accept="image/jpeg,image/png,image/webp" onChange={handleProfilePhotoSelect} className="sr-only" />
+                    </label>
+                    {profilePhotoFile && <p className="mt-2 truncate text-xs text-gray-500">{profilePhotoFile.name} · Simpan Perubahan untuk menerapkan foto.</p>}
+                  </div>
+                </div>
+
                 <div>
                   <label htmlFor="name" className="block text-sm font-medium text-gray-700">
                     Nama Lengkap
@@ -393,8 +444,8 @@ export default function PengaturanProfil() {
           <aside className="lg:sticky lg:top-24" aria-label="Ringkasan akun">
             <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
               <div className="flex flex-col items-center text-center">
-                <div className="flex h-20 w-20 items-center justify-center rounded-full bg-loak-light text-2xl font-bold text-loak-blue">
-                  {initial}
+                <div className="flex h-20 w-20 items-center justify-center overflow-hidden rounded-full bg-loak-light text-2xl font-bold text-loak-blue">
+                  {displayedPhoto ? <img src={displayedPhoto} alt="Foto profil" className="h-full w-full object-cover" /> : initial}
                 </div>
                 <p className="mt-3 truncate text-base font-bold text-gray-900">
                   {user.name}
