@@ -17,6 +17,7 @@ const Footer = () => {
             <ul className="space-y-2">
               <li><Link href="/cara-belanja" className="text-sm text-gray-500 hover:text-loak-blue">Cara Belanja</Link></li>
               <li><Link href="/pembayaran" className="text-sm text-gray-500 hover:text-loak-blue">Pembayaran</Link></li>
+              <li><Link href="/ppob" className="text-sm text-gray-500 hover:text-loak-blue">Pulsa &amp; Tagihan</Link></li>
               <li><Link href="/jaminan-aman" className="text-sm text-gray-500 hover:text-loak-blue">Jaminan Aman</Link></li>
             </ul>
           </div>

@@ -76,6 +76,49 @@ export interface TokenOrder {
   paidAt?: string;
 }
 
+export type PpobType = 'prepaid' | 'postpaid';
+export type PpobOrderStatus = 'quoted' | 'creating_payment' | 'awaiting_payment' | 'processing' | 'pending' | 'success' | 'failed' | 'expired';
+
+export interface PpobProduct {
+  code: string;
+  name: string;
+  category: string;
+  brand: string;
+  type: PpobType;
+  description: string;
+  price: number;
+  providerPrice: number;
+  admin: number;
+  available: boolean;
+  unlimitedStock: boolean;
+  stock: number;
+}
+
+export interface PpobOrder {
+  id: string;
+  type: PpobType;
+  productCode: string;
+  productName: string;
+  category: string | null;
+  brand: string | null;
+  customerNo: string;
+  refId: string;
+  status: PpobOrderStatus;
+  providerStatus: string | null;
+  responseCode: string | null;
+  message: string | null;
+  serialNumber: string | null;
+  providerPrice: number;
+  amount: number;
+  quoteData: Record<string, unknown> | null;
+  quoteExpiresAt: string;
+  paymentUrl: string | null;
+  createdAt: string;
+  paidAt: string | null;
+  completedAt: string | null;
+  guestToken?: string;
+}
+
 const KEY_USERS = 'loakinaja_users';
 const KEY_LISTINGS = 'loakinaja_listings';
 const KEY_SESSION = 'loakinaja_session';
@@ -387,6 +430,52 @@ export async function verifyTokenOrder(orderId: string): Promise<TokenOrder> {
     method: 'POST',
   });
   return result.order;
+}
+
+// ---------- PPOB (Digiflazz) ----------
+
+export async function getPpobProducts(type: PpobType, search = '', category = ''): Promise<{ data: PpobProduct[]; categories: string[] }> {
+  const params = new URLSearchParams({ type });
+  if (search) params.set('search', search);
+  if (category) params.set('category', category);
+  return apiRequest(`/ppob/products?${params.toString()}`);
+}
+
+export async function createPpobQuote(input: { type: PpobType; productCode: string; customerNo: string; buyerName?: string; buyerEmail?: string; buyerPhone?: string }): Promise<PpobOrder> {
+  const result = await apiRequest<{ order: PpobOrder; guestToken?: string }>('/ppob/quotes', {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
+  return { ...result.order, guestToken: result.guestToken };
+}
+
+export async function startPpobPayment(orderId: string, guestToken?: string | null): Promise<PpobOrder> {
+  const isGuestOrder = Boolean(guestToken);
+  const route = isGuestOrder ? 'guest-orders' : 'orders';
+  const result = await apiRequest<{ order: PpobOrder }>(`/ppob/${route}/${encodeURIComponent(orderId)}/payment`, { method: 'POST' }, guestToken);
+  return result.order;
+}
+
+export async function getPpobOrder(orderId: string, guestToken?: string | null): Promise<PpobOrder | null> {
+  try {
+    const route = guestToken ? 'guest-orders' : 'orders';
+    const result = await apiRequest<{ order: PpobOrder }>(`/ppob/${route}/${encodeURIComponent(orderId)}`, {}, guestToken);
+    return result.order;
+  } catch (error) {
+    if (error instanceof ApiError && error.status === 404) return null;
+    throw error;
+  }
+}
+
+export async function verifyPpobPayment(orderId: string, guestToken?: string | null): Promise<PpobOrder> {
+  const route = guestToken ? 'guest-orders' : 'orders';
+  const result = await apiRequest<{ order: PpobOrder }>(`/ppob/${route}/${encodeURIComponent(orderId)}/verify-payment`, { method: 'POST' }, guestToken);
+  return result.order;
+}
+
+export async function getMyPpobOrders(): Promise<PpobOrder[]> {
+  const result = await apiRequest<{ data: PpobOrder[] }>('/ppob/orders');
+  return result.data;
 }
 
 // ---------- Listings ----------

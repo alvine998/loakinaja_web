@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
-import { Search, Heart, MessageSquare, Menu, X, Coins, PlusCircle, LogOut, LayoutDashboard, Settings } from 'lucide-react';
+import { Search, Heart, MessageSquare, Menu, X, Coins, PlusCircle, LogOut, LayoutDashboard, Settings, Smartphone } from 'lucide-react';
 import Illustration from './Illustration';
 import { useAuth } from '@/context/AuthContext';
 
@@ -9,6 +9,8 @@ const Navbar = () => {
   const router = useRouter();
   const { user, logout } = useAuth();
   const [menuOpen, setMenuOpen] = useState(false);
+
+  const searchable = ['/ppob', '/ppob/order', '/ppob/return'].includes(router.pathname);
 
   useEffect(() => {
     setMenuOpen(false);
@@ -58,7 +60,7 @@ const Navbar = () => {
               </div>
               <input
                 className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:border-loak-blue focus:ring-1 focus:ring-loak-blue sm:text-sm transition-colors"
-                placeholder="Cari barang bekas..."
+                placeholder={searchable ? 'Cari produk PPOB...' : 'Cari barang bekas...'}
                 type="search"
               />
             </div>
@@ -71,6 +73,10 @@ const Navbar = () => {
             </Link>
             <Link href="/favorites" className="text-gray-500 hover:text-loak-blue transition-colors" aria-label="Favorit">
               <Heart className="h-6 w-6" />
+            </Link>
+
+            <Link href="/ppob" aria-label="Pulsa & Tagihan" title="Pulsa & Tagihan" className="inline-flex items-center gap-1.5 rounded-md border border-gray-200 px-3 py-2 text-sm font-medium text-gray-700 transition-colors hover:border-loak-blue hover:text-loak-blue">
+              <Smartphone className="h-4 w-4" /><span className="hidden md:inline">Pulsa &amp; Tagihan</span><span className="md:hidden">PPOB</span>
             </Link>
 
             {user ? (
@@ -147,7 +153,7 @@ const Navbar = () => {
             </div>
             <input
               className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:border-loak-blue focus:ring-1 focus:ring-loak-blue sm:text-sm transition-colors"
-              placeholder="Cari barang bekas..."
+              placeholder={searchable ? 'Cari produk PPOB...' : 'Cari barang bekas...'}
               type="search"
             />
           </div>
@@ -209,10 +215,11 @@ const Navbar = () => {
                   <Link href="/jual" onClick={() => setMenuOpen(false)} className="flex-1 text-center text-sm font-medium text-white bg-loak-blue rounded-md px-4 py-2.5 hover:bg-loak-blue-dark transition-colors">
                     Jual Barang
                   </Link>
-                  <Link href="/token" onClick={() => setMenuOpen(false)} className="flex-1 text-center text-sm font-medium text-loak-blue border border-loak-blue rounded-md px-4 py-2.5 hover:bg-loak-light transition-colors">
-                    Beli Token
+                  <Link href="/ppob" onClick={() => setMenuOpen(false)} className="flex-1 text-center text-sm font-medium text-loak-blue border border-loak-blue rounded-md px-4 py-2.5 hover:bg-loak-light transition-colors">
+                    Pulsa & Tagihan
                   </Link>
                 </div>
+                <Link href="/token" onClick={() => setMenuOpen(false)} className="block rounded-md border border-gray-200 px-4 py-2.5 text-center text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors">Beli Token Iklan</Link>
                 <div className="grid grid-cols-2 gap-3">
                   <Link
                     href="/profile"
@@ -230,13 +237,18 @@ const Navbar = () => {
                 </div>
               </div>
             ) : (
-              <div className="flex gap-3">
-                <Link href="/login" onClick={() => setMenuOpen(false)} className="flex-1 text-center text-sm font-medium text-loak-blue border border-loak-blue rounded-md px-4 py-2.5 hover:bg-loak-light transition-colors">
-                  Masuk
+              <div className="space-y-3">
+                <Link href="/ppob" onClick={() => setMenuOpen(false)} className="flex w-full items-center justify-center gap-2 rounded-md bg-loak-blue px-4 py-2.5 text-sm font-semibold text-white hover:bg-loak-blue-dark transition-colors">
+                  <Smartphone className="h-4 w-4" /> Pulsa &amp; Tagihan (tanpa login)
                 </Link>
-                <Link href="/register" onClick={() => setMenuOpen(false)} className="flex-1 text-center text-sm font-medium text-white bg-loak-blue rounded-md px-4 py-2.5 hover:bg-loak-blue-dark transition-colors">
-                  Daftar
-                </Link>
+                <div className="flex gap-3">
+                  <Link href="/login" onClick={() => setMenuOpen(false)} className="flex-1 text-center text-sm font-medium text-loak-blue border border-loak-blue rounded-md px-4 py-2.5 hover:bg-loak-light transition-colors">
+                    Masuk
+                  </Link>
+                  <Link href="/register" onClick={() => setMenuOpen(false)} className="flex-1 text-center text-sm font-medium text-white bg-loak-blue rounded-md px-4 py-2.5 hover:bg-loak-blue-dark transition-colors">
+                    Daftar
+                  </Link>
+                </div>
               </div>
             )}
 

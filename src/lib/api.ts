@@ -21,10 +21,11 @@ export function clearAuthToken(): void {
   if (typeof window !== 'undefined') window.localStorage.removeItem(TOKEN_KEY);
 }
 
-export async function apiRequest<T>(path: string, options: RequestInit = {}): Promise<T> {
+export async function apiRequest<T>(path: string, options: RequestInit = {}, guestToken?: string | null): Promise<T> {
   const headers = new Headers(options.headers);
   const token = getAuthToken();
   if (token) headers.set('Authorization', `Bearer ${token}`);
+  if (guestToken) headers.set('X-Guest-Order-Token', guestToken);
   const isMultipart = typeof FormData !== 'undefined' && options.body instanceof FormData;
   if (options.body && !isMultipart && !headers.has('Content-Type')) {
     headers.set('Content-Type', 'application/json');
