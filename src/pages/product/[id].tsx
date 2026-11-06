@@ -197,7 +197,7 @@ export default function ProductPage() {
 
               <div className="space-y-3">
                 {purchaseError && <p role="alert" className="text-xs text-red-600">{purchaseError}</p>}
-                <Link href="/chat" className="w-full flex items-center justify-center gap-2 py-3 px-4 border border-loak-blue rounded-lg text-sm font-bold text-loak-blue hover:bg-loak-light transition-colors">
+                <Link href={user ? `/chat?listingId=${encodeURIComponent(product?.id || '')}` : `/login?next=${encodeURIComponent(`/chat?listingId=${product?.id || ''}`)}`} className="w-full flex items-center justify-center gap-2 py-3 px-4 border border-loak-blue rounded-lg text-sm font-bold text-loak-blue hover:bg-loak-light transition-colors">
                   <MessageSquare className="w-5 h-5" />
                   Chat Penjual
                 </Link>

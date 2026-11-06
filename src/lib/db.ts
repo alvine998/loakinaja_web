@@ -72,6 +72,28 @@ export interface EscrowSale {
   seller?: { id: string; name: string };
 }
 
+export interface ChatMessage {
+  id: string;
+  conversationId: string;
+  senderId: string;
+  text: string;
+  createdAt: string;
+  sender?: { id: string; name: string };
+}
+
+export interface ChatConversation {
+  id: string;
+  listingId: string;
+  buyerId: string;
+  sellerId: string;
+  createdAt: string;
+  updatedAt: string;
+  listing?: { id: string; title: string; status: ListingStatus };
+  buyer?: { id: string; name: string };
+  seller?: { id: string; name: string };
+  lastMessage?: ChatMessage | null;
+}
+
 export interface Withdrawal {
   id: string;
   userId: string;
@@ -597,6 +619,32 @@ export async function submitEscrowPayment(saleId: string): Promise<EscrowSale> {
 
 export async function requestEscrowRelease(saleId: string): Promise<EscrowSale> {
   const result = await apiRequest<{ data: EscrowSale }>(`/escrow-sales/${encodeURIComponent(saleId)}/confirm-delivery`, { method: 'POST', body: JSON.stringify({ decision: 'confirm' }) });
+  return result.data;
+}
+
+export async function getChatConversations(): Promise<ChatConversation[]> {
+  const result = await apiRequest<{ data: ChatConversation[] }>('/chats');
+  return result.data;
+}
+
+export async function openChatConversation(listingId: string): Promise<ChatConversation> {
+  const result = await apiRequest<{ data: ChatConversation }>('/chats', {
+    method: 'POST',
+    body: JSON.stringify({ listingId }),
+  });
+  return result.data;
+}
+
+export async function getChatMessages(conversationId: string): Promise<ChatMessage[]> {
+  const result = await apiRequest<{ data: ChatMessage[] }>(`/chats/${encodeURIComponent(conversationId)}/messages`);
+  return result.data;
+}
+
+export async function sendChatMessage(conversationId: string, text: string): Promise<ChatMessage> {
+  const result = await apiRequest<{ data: ChatMessage }>(`/chats/${encodeURIComponent(conversationId)}/messages`, {
+    method: 'POST',
+    body: JSON.stringify({ text }),
+  });
   return result.data;
 }
 
