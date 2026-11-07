@@ -652,8 +652,15 @@ export async function getSellerBalance(): Promise<{ availableAmount: number; min
   return apiRequest('/withdrawals');
 }
 
-export async function requestSellerWithdrawal(input: Pick<Withdrawal, 'amount' | 'bankName' | 'accountNumber' | 'accountHolder'>): Promise<Withdrawal> {
-  const result = await apiRequest<{ data: Withdrawal }>('/withdrawals', { method: 'POST', body: JSON.stringify(input) });
+export type SellerWithdrawalInput = Pick<Withdrawal, 'amount' | 'bankName' | 'accountNumber' | 'accountHolder'>;
+
+export async function requestSellerWithdrawalOtp(input: SellerWithdrawalInput): Promise<string> {
+  const result = await apiRequest<{ message: string }>('/withdrawals/otp', { method: 'POST', body: JSON.stringify(input) });
+  return result.message;
+}
+
+export async function requestSellerWithdrawal(input: SellerWithdrawalInput, otp: string): Promise<Withdrawal> {
+  const result = await apiRequest<{ data: Withdrawal }>('/withdrawals', { method: 'POST', body: JSON.stringify({ ...input, otp }) });
   return result.data;
 }
 
