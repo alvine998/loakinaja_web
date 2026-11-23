@@ -14,6 +14,7 @@ const SITE_URLS = [
   ['/tarik-dana', 'monthly', '0.7'],
   ['/panduan-seller', 'monthly', '0.7'],
   ['/syarat-ketentuan', 'monthly', '0.5'],
+  ['/ketentuan-refund', 'monthly', '0.5'],
   ['/kebijakan-privasi', 'monthly', '0.5'],
   ['/hubungi-kami', 'monthly', '0.6'],
   ['/faq', 'monthly', '0.6'],

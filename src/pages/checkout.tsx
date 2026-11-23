@@ -81,7 +81,7 @@ export default function CheckoutPage() {
     setSubmitting(true);
     try {
       const order = await createTokenOrder(pkg.id);
-      if (!order.paymentUrl) throw new Error('Tautan pembayaran Mayar tidak tersedia.');
+      if (!order.paymentUrl) throw new Error('Tautan pembayaran iPaymu tidak tersedia.');
       window.location.assign(order.paymentUrl);
     } catch (err) {
       setError((err as Error).message);
@@ -106,7 +106,7 @@ export default function CheckoutPage() {
         <div className="mb-6">
           <h1 className="text-2xl font-bold text-gray-900 sm:text-3xl">Pembayaran</h1>
           <p className="mt-1 text-sm text-gray-500">
-            Lanjutkan ke halaman pembayaran aman Mayar untuk memilih metode pembayaran.
+            Lanjutkan ke halaman pembayaran aman iPaymu untuk memilih metode pembayaran.
           </p>
         </div>
 
@@ -121,9 +121,9 @@ export default function CheckoutPage() {
             <div className="flex items-start gap-3 rounded-xl bg-loak-light p-4">
               <Info className="mt-0.5 h-5 w-5 shrink-0 text-loak-blue" />
               <div>
-                <h2 className="text-sm font-bold text-gray-900">Pembayaran melalui Mayar</h2>
+                <h2 className="text-sm font-bold text-gray-900">Pembayaran melalui iPaymu</h2>
                 <p className="mt-1 text-sm text-gray-600">
-                  Kamu akan diarahkan ke checkout Mayar untuk memilih metode pembayaran yang tersedia.
+                  Kamu akan diarahkan ke checkout iPaymu untuk memilih metode pembayaran yang tersedia.
                   Token masuk otomatis setelah pembayaran terkonfirmasi.
                 </p>
               </div>
@@ -157,7 +157,7 @@ export default function CheckoutPage() {
                 </div>
                 <div className="flex justify-between gap-4">
                   <dt className="text-gray-500">Payment gateway</dt>
-                  <dd className="text-right text-gray-800">Mayar</dd>
+                  <dd className="text-right text-gray-800">iPaymu</dd>
                 </div>
                 <div className="flex justify-between gap-4 border-t border-gray-100 pt-3">
                   <dt className="font-bold text-gray-900">Total</dt>
@@ -178,7 +178,7 @@ export default function CheckoutPage() {
 
               <p className="mt-3 flex items-start gap-2 text-[11px] leading-relaxed text-gray-400">
                 <Info className="h-4 w-4 shrink-0" />
-                Token hanya ditambahkan setelah status transaksi berhasil diverifikasi langsung ke Mayar.
+                Token hanya ditambahkan setelah status transaksi berhasil diverifikasi langsung ke iPaymu.
               </p>
             </div>
           </aside>

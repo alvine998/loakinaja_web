@@ -151,7 +151,7 @@ export default function WaitingPaymentPage() {
             Menunggu Pembayaran
           </h1>
           <p className="mt-1 text-sm text-gray-500">
-            Selesaikan pembayaran melalui Mayar agar token langsung masuk.
+            Selesaikan pembayaran melalui iPaymu agar token langsung masuk.
           </p>
           <div
             className={`mt-4 inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold ${
@@ -160,7 +160,7 @@ export default function WaitingPaymentPage() {
           >
             <Clock className="h-4 w-4" />
             {expired
-              ? 'Melewati batas waktu; memeriksa status Mayar'
+              ? 'Melewati batas waktu; memeriksa status iPaymu'
               : `Sisa waktu ${formatCountdown(Date.parse(order.expiresAt) - now)}`}
           </div>
         </div>
@@ -177,7 +177,7 @@ export default function WaitingPaymentPage() {
               <p className="text-xs font-semibold uppercase tracking-wider text-gray-400">
                 Gateway Pembayaran
               </p>
-              <p className="text-xs text-gray-500">Mayar</p>
+              <p className="text-xs text-gray-500">iPaymu</p>
             </div>
             <p className="text-xs text-gray-400">
               Pesanan #{order.id}
@@ -186,7 +186,7 @@ export default function WaitingPaymentPage() {
 
           <div className="mt-3 rounded-xl border border-dashed border-loak-blue/40 bg-loak-light px-4 py-4 text-center">
             <p className="text-sm text-gray-700">
-              Selesaikan pembayaran melalui checkout Mayar. Halaman ini akan memperbarui status pesanan otomatis.
+              Selesaikan pembayaran melalui checkout iPaymu. Halaman ini akan memperbarui status pesanan otomatis.
             </p>
             {order.paymentUrl && (
               <a
@@ -195,7 +195,7 @@ export default function WaitingPaymentPage() {
                 rel="noreferrer"
                 className="mt-3 inline-flex rounded-lg bg-loak-blue px-4 py-2.5 text-sm font-bold text-white transition-colors hover:bg-loak-blue-dark"
               >
-                Buka Pembayaran Mayar
+                Buka Pembayaran iPaymu
               </a>
             )}
           </div>
@@ -213,7 +213,7 @@ export default function WaitingPaymentPage() {
           </div>
 
           <p className="mt-5 text-center text-xs text-gray-500">
-            Status diperiksa ke Mayar secara berkala. Kamu juga bisa kembali lagi nanti untuk melihat hasilnya.
+            Status diperiksa ke iPaymu secara berkala. Kamu juga bisa kembali lagi nanti untuk melihat hasilnya.
           </p>
 
           <button

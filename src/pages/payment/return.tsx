@@ -18,6 +18,7 @@ export default function PaymentReturnPage() {
     }
 
     const orderId = typeof router.query.order === 'string' ? router.query.order : '';
+    const trxId = typeof router.query.trx_id === 'string' ? router.query.trx_id : undefined;
     if (!orderId) {
       router.replace('/token');
       return;
@@ -26,7 +27,7 @@ export default function PaymentReturnPage() {
     let active = true;
     const checkPayment = async () => {
       try {
-        const order = await verifyTokenOrder(orderId);
+        const order = await verifyTokenOrder(orderId, trxId);
         if (!active) return;
         if (order.status === 'paid') {
           router.replace(`/payment/success?order=${encodeURIComponent(order.id)}`);
@@ -54,7 +55,7 @@ export default function PaymentReturnPage() {
     <>
       <Head><title>Memeriksa Pembayaran - LoakinAja</title></Head>
       <div className="py-20 text-center">
-        <p className="text-gray-700">Memeriksa status pembayaran dengan Mayar...</p>
+        <p className="text-gray-700">Memeriksa status pembayaran dengan iPaymu...</p>
         {error && <p role="alert" className="mt-3 text-sm text-red-600">{error}</p>}
       </div>
     </>

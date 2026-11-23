@@ -146,7 +146,7 @@ export default function PaymentFailedPage() {
             </div>
             <div className="flex justify-between gap-4">
               <dt className="text-gray-500">Payment gateway</dt>
-              <dd className="text-right text-gray-800">Mayar</dd>
+              <dd className="text-right text-gray-800">iPaymu</dd>
             </div>
             <div className="flex justify-between gap-4">
               <dt className="text-gray-500">Dibuat</dt>

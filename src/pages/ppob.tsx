@@ -288,11 +288,11 @@ export default function PpobPage() {
                     <strong className="text-xl text-loak-blue">{formatRupiah(quote.amount)}</strong>
                   </div>
                   <button type="button" onClick={handlePayment} disabled={submitting} className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl bg-loak-blue px-4 py-3 text-sm font-bold text-white transition hover:bg-loak-blue-dark disabled:opacity-50">
-                    {submitting ? <><Loader2 className="h-4 w-4 animate-spin" /> Menyiapkan pembayaran...</> : <>Bayar melalui Mayar <ArrowRight className="h-4 w-4" /></>}
+                    {submitting ? <><Loader2 className="h-4 w-4 animate-spin" /> Menyiapkan pembayaran...</> : <>Bayar melalui iPaymu <ArrowRight className="h-4 w-4" /></>}
                   </button>
                 </>
               )}
-              <p className="mt-3 text-xs leading-relaxed text-gray-400">Transaksi ke Digiflazz baru dikirim setelah Mayar mengonfirmasi pembayaran.</p>
+              <p className="mt-3 text-xs leading-relaxed text-gray-400">Transaksi ke Digiflazz baru dikirim setelah iPaymu mengonfirmasi pembayaran.</p>
             </section>
 
             <section className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm sm:p-6">

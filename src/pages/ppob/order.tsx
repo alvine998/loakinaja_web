@@ -29,9 +29,10 @@ export default function PpobOrderPage() {
 
   const sync = useCallback(async () => {
     const id = typeof router.query.id === 'string' ? router.query.id : '';
+    const trxId = typeof router.query.trx_id === 'string' ? router.query.trx_id : undefined;
     if (!id) return;
     try {
-      const result = await verifyPpobPayment(id, guestToken);
+      const result = await verifyPpobPayment(id, guestToken, trxId);
       setOrder(result);
       setError('');
     } catch (syncError) {
@@ -40,7 +41,7 @@ export default function PpobOrderPage() {
       if (result) setOrder(result);
       else setNotFound(true);
     }
-  }, [router.query.id, guestToken]);
+  }, [router.query.id, router.query.trx_id, guestToken]);
 
   useEffect(() => {
     if (!router.isReady || !authResolved || !router.query.id) return;

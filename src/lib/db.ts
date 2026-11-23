@@ -470,7 +470,7 @@ export async function verifyLoginOtp(
   return delay(publicUser(user));
 }
 
-// ---------- Token orders (Mayar) ----------
+// ---------- Token orders (iPaymu) ----------
 
 export async function createTokenOrder(packageId: string): Promise<TokenOrder> {
   const result = await apiRequest<{ order: TokenOrder }>('/token-orders', {
@@ -490,9 +490,10 @@ export async function getTokenOrder(orderId: string): Promise<TokenOrder | null>
   }
 }
 
-export async function verifyTokenOrder(orderId: string): Promise<TokenOrder> {
+export async function verifyTokenOrder(orderId: string, trxId?: string): Promise<TokenOrder> {
   const result = await apiRequest<{ order: TokenOrder }>(`/token-orders/${encodeURIComponent(orderId)}/verify`, {
     method: 'POST',
+    ...(trxId ? { body: JSON.stringify({ trx_id: trxId }) } : {}),
   });
   return result.order;
 }
@@ -532,9 +533,12 @@ export async function getPpobOrder(orderId: string, guestToken?: string | null):
   }
 }
 
-export async function verifyPpobPayment(orderId: string, guestToken?: string | null): Promise<PpobOrder> {
+export async function verifyPpobPayment(orderId: string, guestToken?: string | null, trxId?: string): Promise<PpobOrder> {
   const route = guestToken ? 'guest-orders' : 'orders';
-  const result = await apiRequest<{ order: PpobOrder }>(`/ppob/${route}/${encodeURIComponent(orderId)}/verify-payment`, { method: 'POST' }, guestToken);
+  const result = await apiRequest<{ order: PpobOrder }>(`/ppob/${route}/${encodeURIComponent(orderId)}/verify-payment`, {
+    method: 'POST',
+    ...(trxId ? { body: JSON.stringify({ trx_id: trxId }) } : {}),
+  }, guestToken);
   return result.order;
 }
 
